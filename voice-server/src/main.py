@@ -6,8 +6,8 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config.logging_config import LoggingSettings, setup_logging, get_logger
-from config.settings import ServerSettings
+from src.config.logging_config import LoggingSettings, setup_logging, get_logger
+from src.config.settings import ServerSettings
 
 # Setup logging
 logging_settings = LoggingSettings()
