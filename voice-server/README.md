@@ -37,11 +37,21 @@ A production-ready FastAPI voice microservice server providing real-time Speech-
 # Navigate to the voice-server directory
 cd delayed-streams-modeling/voice-server
 
-# Install dependencies
-pip install -e .
+# Option 1: Install with pip (using requirements.txt)
+pip install -r requirements.txt
 
-# Or using uv
+# Option 2: Install with uv (recommended, faster)
+uv pip install -r requirements.txt
+
+# Option 3: Install with pip/uv using pyproject.toml
+pip install -e .
+# or
 uv pip install -e .
+
+# Install development dependencies (optional)
+pip install -r requirements-dev.txt
+# or
+uv pip install -e ".[dev]"
 ```
 
 **Dependencies:**
