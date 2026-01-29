@@ -50,51 +50,51 @@
 
 ## 6. STT WebSocket Endpoint
 
-- [ ] 6.1 Create `src/api/routes/websocket_stt.py` with `/api/v1/ws/stt` WebSocket endpoint
-- [ ] 6.2 Implement authentication via API key header
-- [ ] 6.3 Implement session generation (UUID) and session state initialization
-- [ ] 6.4 Implement config message handling (streaming mode, VAD mode, audio format)
-- [ ] 6.5 Implement audio message receiving loop with buffer management
-- [ ] 6.6 Implement STT processing through KyutaiSTTModel
-- [ ] 6.7 Implement text result sending with partial/final/is_final markers
-- [ ] 6.8 Implement EOS handling and final result delivery
-- [ ] 6.9 Implement error handling and connection cleanup
+- [x] 6.1 Create `src/api/routes/websocket_stt.py` with `/api/v1/ws/stt` WebSocket endpoint
+- [x] 6.2 Implement authentication via API key header
+- [x] 6.3 Implement session generation (UUID) and session state initialization
+- [x] 6.4 Implement config message handling (streaming mode, VAD mode, audio format)
+- [x] 6.5 Implement audio message receiving loop with buffer management
+- [x] 6.6 Implement STT processing through KyutaiSTTModel
+- [x] 6.7 Implement text result sending with partial/final/is_final markers
+- [x] 6.8 Implement EOS handling and final result delivery
+- [x] 6.9 Implement error handling and connection cleanup
 
 ## 7. TTS Model Integration
 
-- [ ] 7.1 Create `src/models/tts/base.py` with TTSModelBase abstract interface (initialize, synthesize_stream, synthesize)
-- [ ] 7.2 Create `src/models/tts/pocket.py` with PocketTTSModel using external pocket-tts package
-- [ ] 7.3 Create `src/models/tts/worker.py` with TTSWorker for thread-safe serial processing
-- [ ] 7.4 Implement asyncio.to_thread wrapper for CPU-bound TTS generation
-- [ ] 7.5 Implement request queue for concurrent session handling
-- [ ] 7.6 Create `src/models/tts/model_manager.py` with TTSModelManager for voice loading and management
-- [ ] 7.7 Implement voice parameter controls (speed, stability/CFG, pitch)
+- [x] 7.1 Create `src/models/tts/base.py` with TTSModelBase abstract interface (initialize, synthesize_stream, synthesize)
+- [x] 7.2 Create `src/models/tts/pocket.py` with PocketTTSModel using external pocket-tts package
+- [x] 7.3 Create `src/models/tts/worker.py` with TTSWorker for thread-safe serial processing
+- [x] 7.4 Implement asyncio.to_thread wrapper for CPU-bound TTS generation
+- [x] 7.5 Implement request queue for concurrent session handling
+- [x] 7.6 Create `src/models/tts/model_manager.py` with TTSModelManager for voice loading and management
+- [x] 7.7 Implement voice parameter controls (speed, stability/CFG, pitch)
 
 ## 8. TTS WebSocket Endpoint
 
-- [ ] 8.1 Create `src/api/routes/websocket_tts.py` with `/api/v1/ws/tts` WebSocket endpoint
-- [ ] 8.2 Implement authentication via API key header
-- [ ] 8.3 Implement session generation and state initialization
-- [ ] 8.4 Implement config message handling (voice selection, output format, voice parameters)
-- [ ] 8.5 Implement text message receiving loop (support both streaming and complete modes)
-- [ ] 8.6 Implement TTS processing through PocketTTSModel and TTSWorker
-- [ ] 8.7 Implement audio chunk streaming in requested format (int16/float32/WAV)
-- [ ] 8.8 Implement EOS marker sending after synthesis complete
-- [ ] 8.9 Implement error handling and connection cleanup
+- [x] 8.1 Create `src/api/routes/websocket_tts.py` with `/api/v1/ws/tts` WebSocket endpoint
+- [x] 8.2 Implement authentication via API key header
+- [x] 8.3 Implement session generation and state initialization
+- [x] 8.4 Implement config message handling (voice selection, output format, voice parameters)
+- [x] 8.5 Implement text message receiving loop (support both streaming and complete modes)
+- [x] 8.6 Implement TTS processing through PocketTTSModel and TTSWorker
+- [x] 8.7 Implement audio chunk streaming in requested format (int16/float32/WAV)
+- [x] 8.8 Implement EOS marker sending after synthesis complete
+- [x] 8.9 Implement error handling and connection cleanup
 
 ## 9. Session Management
 
-- [ ] 9.1 Create `src/services/session/models.py` with SessionHistory, ConversationTurn, and SessionState dataclasses
-- [ ] 9.2 Create `src/db/base.py` with database connection handling
-- [ ] 9.3 Create `src/db/repositories.py` with session and voice repositories
-- [ ] 9.4 Create `src/services/session/store.py` with SessionStoreBase abstract interface
-- [ ] 9.5 Create SQLiteSessionStore implementation in `src/services/session/store.py`
-- [ ] 9.6 Create InMemorySessionStore implementation for testing
-- [ ] 9.7 Create `src/services/session/manager.py` with SessionManager for session lifecycle
-- [ ] 9.8 Implement create_or_resume_session with client-provided history support
-- [ ] 9.9 Implement session activity tracking and timeout handling
-- [ ] 9.10 Implement concurrent session limits with semaphore
-- [ ] 9.11 Implement background cleanup task for expired sessions
+- [x] 9.1 Create `src/services/session/models.py` with SessionHistory, ConversationTurn, and SessionState dataclasses
+- [x] 9.2 Create `src/db/base.py` with database connection handling
+- [x] 9.3 Create `src/db/repositories.py` with session and voice repositories
+- [x] 9.4 Create `src/services/session/store.py` with SessionStoreBase abstract interface
+- [x] 9.5 Create SQLiteSessionStore implementation in `src/services/session/store.py`
+- [x] 9.6 Create InMemorySessionStore implementation for testing
+- [x] 9.7 Create `src/services/session/manager.py` with SessionManager for session lifecycle
+- [x] 9.8 Implement create_or_resume_session with client-provided history support
+- [x] 9.9 Implement session activity tracking and timeout handling
+- [x] 9.10 Implement concurrent session limits with semaphore
+- [x] 9.11 Implement background cleanup task for expired sessions
 
 ## 10. Voice Management
 
@@ -109,18 +109,18 @@
 
 ## 11. Health and Metrics
 
-- [ ] 11.1 Create `src/api/routes/health.py` with `/health` and `/metrics` endpoints
-- [ ] 11.2 Implement `/health` endpoint returning status and model information
-- [ ] 11.3 Create `src/utils/metrics.py` with Prometheus metrics definitions
-- [ ] 11.4 Implement active_sessions gauge metric
-- [ ] 11.5 Implement stt_request_latency_ms and tts_request_latency_ms histogram metrics
-- [ ] 11.6 Implement model_status gauge metric with labels
-- [ ] 11.7 Implement error_total counter metric with error type labels
-- [ ] 11.8 Implement websocket_connections_total counter metric
-- [ ] 11.9 Implement audio_processing_bytes_total counter metric
-- [ ] 11.10 Implement gpu_memory_bytes gauge metric (when GPU available)
-- [ ] 11.11 Implement session_timeouts_total counter metric
-- [ ] 11.12 Implement `/metrics` endpoint returning Prometheus format
+- [x] 11.1 Create `src/api/routes/health.py` with `/health` and `/metrics` endpoints
+- [x] 11.2 Implement `/health` endpoint returning status and model information
+- [x] 11.3 Create `src/utils/metrics.py` with Prometheus metrics definitions
+- [x] 11.4 Implement active_sessions gauge metric
+- [x] 11.5 Implement stt_request_latency_ms and tts_request_latency_ms histogram metrics
+- [x] 11.6 Implement model_status gauge metric with labels
+- [x] 11.7 Implement error_total counter metric with error type labels
+- [x] 11.8 Implement websocket_connections_total counter metric
+- [x] 11.9 Implement audio_processing_bytes_total counter metric
+- [x] 11.10 Implement gpu_memory_bytes gauge metric (when GPU available)
+- [x] 11.11 Implement session_timeouts_total counter metric
+- [x] 11.12 Implement `/metrics` endpoint returning Prometheus format
 
 ## 12. Testing and Examples
 
@@ -141,9 +141,9 @@
 
 ## 13. Production Readiness
 
-- [ ] 13.1 Implement graceful shutdown with connection draining
-- [ ] 13.2 Add API key authentication with configurable key list
-- [ ] 13.3 Implement rate limiting per session
+- [x] 13.1 Implement graceful shutdown with connection draining
+- [x] 13.2 Add API key authentication with configurable key list
+- [x] 13.3 Implement rate limiting per session
 - [ ] 13.4 Create production Dockerfile with GPU support
 - [ ] 13.5 Create `docker-compose.yml` for development environment
 - [ ] 13.6 Create `scripts/start_dev.sh` development startup script
