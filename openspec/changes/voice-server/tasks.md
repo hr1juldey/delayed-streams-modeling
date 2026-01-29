@@ -2,51 +2,51 @@
 
 ## 1. Project Structure and Configuration
 
-- [ ] 1.1 Create `voice-server/` directory structure with all subdirectories (config/, src/, tests/, examples/, data/, scripts/)
-- [ ] 1.2 Create `pyproject.toml` with all dependencies (fastapi, uvicorn, websockets, pydantic, msgpack, pocket-tts, moshi, torch, julius, sphn, prometheus-client, aiosqlite)
-- [ ] 1.3 Create `config/settings.py` with Pydantic Settings hierarchy (AudioSettings, STTSettings, TTSSettings, SessionSettings, ServerSettings)
-- [ ] 1.4 Create `config/logging_config.py` for structured JSON logging to stdout and detailed file logging with rotation
-- [ ] 1.5 Create `.env.example` with all configurable environment variables documented
-- [ ] 1.6 Create `README.md` with project overview, setup instructions, and usage examples
+- [x] 1.1 Create `voice-server/` directory structure with all subdirectories (config/, src/, tests/, examples/, data/, scripts/)
+- [x] 1.2 Create `pyproject.toml` with all dependencies (fastapi, uvicorn, websockets, pydantic, msgpack, pocket-tts, moshi, torch, julius, sphn, prometheus-client, aiosqlite)
+- [x] 1.3 Create `config/settings.py` with Pydantic Settings hierarchy (AudioSettings, STTSettings, TTSSettings, SessionSettings, ServerSettings)
+- [x] 1.4 Create `config/logging_config.py` for structured JSON logging to stdout and detailed file logging with rotation
+- [x] 1.5 Create `.env.example` with all configurable environment variables documented
+- [x] 1.6 Create `README.md` with project overview, setup instructions, and usage examples
 
 ## 2. Core FastAPI Application
 
-- [ ] 2.1 Create `src/main.py` FastAPI application entry point with CORS middleware configuration
-- [ ] 2.2 Create `src/core/lifecycle.py` with startup/shutdown handlers for model loading and cleanup
-- [ ] 2.3 Create `src/core/exceptions.py` with custom exception classes for voice server errors
-- [ ] 2.4 Create `src/core/security.py` with API key authentication dependency
-- [ ] 2.5 Create `src/api/dependencies.py` with FastAPI dependencies for auth and session management
-- [ ] 2.6 Create `src/api/middleware.py` with rate limiting middleware (per-session limits)
+- [x] 2.1 Create `src/main.py` FastAPI application entry point with CORS middleware configuration
+- [x] 2.2 Create `src/core/lifecycle.py` with startup/shutdown handlers for model loading and cleanup
+- [x] 2.3 Create `src/core/exceptions.py` with custom exception classes for voice server errors
+- [x] 2.4 Create `src/core/security.py` with API key authentication dependency
+- [x] 2.5 Create `src/api/dependencies.py` with FastAPI dependencies for auth and session management
+- [x] 2.6 Create `src/api/middleware.py` with rate limiting middleware (per-session limits)
 
 ## 3. WebSocket Protocol
 
-- [ ] 3.1 Create `src/services/websocket/protocol.py` with MessageProtocol class supporting JSON and MessagePack encoding/decoding
-- [ ] 3.2 Create `src/services/websocket/connection.py` with ConnectionManager for managing active WebSocket connections
-- [ ] 3.3 Create `src/services/websocket/heartbeat.py` with ping/pong heartbeat management
-- [ ] 3.4 Define message types (MessageType enum: Audio, Text, Error, EOS, Config) and Message dataclass
-- [ ] 3.5 Implement message encoding/decoding for both JSON and MessagePack formats
-- [ ] 3.6 Implement session ID routing in ConnectionManager
+- [x] 3.1 Create `src/services/websocket/protocol.py` with MessageProtocol class supporting JSON and MessagePack encoding/decoding
+- [x] 3.2 Create `src/services/websocket/connection.py` with ConnectionManager for managing active WebSocket connections
+- [x] 3.3 Create `src/services/websocket/heartbeat.py` with ping/pong heartbeat management
+- [x] 3.4 Define message types (MessageType enum: Audio, Text, Error, EOS, Config) and Message dataclass
+- [x] 3.5 Implement message encoding/decoding for both JSON and MessagePack formats
+- [x] 3.6 Implement session ID routing in ConnectionManager
 
 ## 4. Audio Processing
 
-- [ ] 4.1 Create `src/utils/audio.py` with audio resampling utilities using julius
-- [ ] 4.2 Create `src/services/audio/processor.py` with AudioProcessor for format conversion (float32/int16/WAV)
-- [ ] 4.3 Create `src/services/audio/buffer.py` with AudioBuffer implementing backpressure handling
-- [ ] 4.4 Create `src/services/audio/vad.py` with VoiceActivityDetection wrapper for server-side VAD
-- [ ] 4.5 Implement audio normalization for TTS output
-- [ ] 4.6 Implement WAV chunk generation with proper headers
+- [x] 4.1 Create `src/utils/audio.py` with audio resampling utilities using julius
+- [x] 4.2 Create `src/services/audio/processor.py` with AudioProcessor for format conversion (float32/int16/WAV)
+- [x] 4.3 Create `src/services/audio/buffer.py` with AudioBuffer implementing backpressure handling
+- [x] 4.4 Create `src/services/audio/vad.py` with VoiceActivityDetection wrapper for server-side VAD
+- [x] 4.5 Implement audio normalization for TTS output
+- [x] 4.6 Implement WAV chunk generation with proper headers
 
 ## 5. STT Model Integration
 
-- [ ] 5.1 Create `src/models/stt/base.py` with STTModelBase abstract interface (initialize, process_audio_chunk, finalize_stream, switch_model)
-- [ ] 5.2 Create `src/models/stt/kyutai.py` with KyutaiSTTModel extending `scripts/stt_from_file_pytorch.py` patterns
-- [ ] 5.3 Implement CheckpointInfo.from_hf_repo() integration for model loading
-- [ ] 5.4 Implement Mimi encoder integration for audio tokenization
-- [ ] 5.5 Implement LMGen streaming with step_with_extra_heads() for VAD
-- [ ] 5.6 Implement custom vocabulary support via prompting
-- [ ] 5.7 Create `src/models/stt/model_manager.py` with STTModelManager for model loading and graceful switching
-- [ ] 5.8 Implement model warmup on startup
-- [ ] 5.9 Implement runtime model switching with session draining
+- [x] 5.1 Create `src/models/stt/base.py` with STTModelBase abstract interface (initialize, process_audio_chunk, finalize_stream, switch_model)
+- [x] 5.2 Create `src/models/stt/kyutai.py` with KyutaiSTTModel extending `scripts/stt_from_file_pytorch.py` patterns
+- [x] 5.3 Implement CheckpointInfo.from_hf_repo() integration for model loading
+- [x] 5.4 Implement Mimi encoder integration for audio tokenization
+- [x] 5.5 Implement LMGen streaming with step_with_extra_heads() for VAD
+- [x] 5.6 Implement custom vocabulary support via prompting
+- [x] 5.7 Create `src/models/stt/model_manager.py` with STTModelManager for model loading and graceful switching
+- [x] 5.8 Implement model warmup on startup
+- [x] 5.9 Implement runtime model switching with session draining
 
 ## 6. STT WebSocket Endpoint
 
