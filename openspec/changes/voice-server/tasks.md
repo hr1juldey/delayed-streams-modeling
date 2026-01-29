@@ -98,14 +98,14 @@
 
 ## 10. Voice Management
 
-- [ ] 10.1 Create `src/api/routes/voice.py` with voice management HTTP endpoints
-- [ ] 10.2 Implement POST `/api/v1/voice/upload` for audio file upload with Pocket TTS export to .safetensors
-- [ ] 10.3 Implement GET `/api/v1/voice/list` for listing available voices
-- [ ] 10.4 Implement POST `/api/v1/voice/switch` for switching active voice
-- [ ] 10.5 Implement DELETE `/api/v1/voice/{voice_id}` for voice deletion
-- [ ] 10.6 Implement GET `/api/v1/voice/{voice_id}` for voice metadata
-- [ ] 10.7 Implement voice storage in configured voices_path directory
-- [ ] 10.8 Implement voice file validation and error handling
+- [x] 10.1 Create `src/api/routes/voice.py` with voice management HTTP endpoints
+- [x] 10.2 Implement POST `/api/v1/voice/upload` for audio file upload with Pocket TTS export to .safetensors
+- [x] 10.3 Implement GET `/api/v1/voice/list` for listing available voices
+- [x] 10.4 Implement POST `/api/v1/voice/switch` for switching active voice
+- [x] 10.5 Implement DELETE `/api/v1/voice/{voice_id}` for voice deletion
+- [x] 10.6 Implement GET `/api/v1/voice/{voice_id}` for voice metadata
+- [x] 10.7 Implement voice storage in configured voices_path directory
+- [x] 10.8 Implement voice file validation and error handling
 
 ## 11. Health and Metrics
 
@@ -124,9 +124,9 @@
 
 ## 12. Testing and Examples
 
-- [ ] 12.1 Create `examples/stt_client.py` test client for STT WebSocket
-- [ ] 12.2 Create `examples/tts_client.py` test client for TTS WebSocket
-- [ ] 12.3 Create `examples/full_conversation.py` demonstrating complete STT + TTS flow
+- [x] 12.1 Create `examples/stt_client.py` test client for STT WebSocket
+- [x] 12.2 Create `examples/tts_client.py` test client for TTS WebSocket
+- [x] 12.3 Create `examples/full_conversation.py` demonstrating complete STT + TTS flow
 - [ ] 12.4 Test STT WebSocket connection with API key authentication
 - [ ] 12.5 Test STT audio streaming with partial and final results
 - [ ] 12.6 Test STT model switching (1B ↔ 2.6B)
@@ -146,8 +146,8 @@
 - [x] 13.3 Implement rate limiting per session
 - [ ] 13.4 Create production Dockerfile with GPU support
 - [ ] 13.5 Create `docker-compose.yml` for development environment
-- [ ] 13.6 Create `scripts/start_dev.sh` development startup script
-- [ ] 13.7 Create `scripts/start_prod.sh` production startup script
-- [ ] 13.8 Update README with deployment instructions
-- [ ] 13.9 Document environment variables and configuration options
-- [ ] 13.10 Document API endpoints and message formats
+- [x] 13.6 Create `scripts/start_dev.sh` development startup script
+- [x] 13.7 Create `scripts/start_prod.sh` production startup script
+- [x] 13.8 Update README with deployment instructions
+- [x] 13.9 Document environment variables and configuration options
+- [x] 13.10 Document API endpoints and message formats
