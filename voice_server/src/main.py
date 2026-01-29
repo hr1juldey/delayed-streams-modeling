@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     Handles startup and shutdown events for model loading and cleanup.
     """
-    from src.core.lifecycle import LifecycleManager, set_lifecycle_manager
+    from voice_server.src.core.lifecycle import LifecycleManager, set_lifecycle_manager
 
     logger.info("Voice Server starting up...")
 
@@ -51,14 +51,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     set_lifecycle_manager(lifecycle_manager)
 
     # Initialize connection manager
-    from src.services.websocket.connection import ConnectionManager, set_connection_manager
+    from voice_server.src.services.websocket.connection import ConnectionManager, set_connection_manager
 
     connection_manager = ConnectionManager(settings)
     set_connection_manager(connection_manager)
     logger.info("Connection manager initialized")
 
     # Initialize heartbeat monitor
-    from src.services.websocket.heartbeat import HeartbeatMonitor, set_heartbeat_monitor
+    from voice_server.src.services.websocket.heartbeat import HeartbeatMonitor, set_heartbeat_monitor
 
     heartbeat_monitor = HeartbeatMonitor(connection_manager, settings)
     set_heartbeat_monitor(heartbeat_monitor)
@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Heartbeat monitor started")
 
     # Initialize session manager
-    from src.services.session.manager import SessionManager, set_session_manager
+    from voice_server.src.services.session.manager import SessionManager, set_session_manager
 
     session_manager = SessionManager(settings.session)
     set_session_manager(session_manager)
@@ -75,7 +75,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Load STT model if preload is enabled
     if settings.stt.preload_model:
-        from src.models.stt.model_manager import STTModelManager, set_stt_model_manager
+        from voice_server.src.models.stt.model_manager import STTModelManager, set_stt_model_manager
 
         logger.info("Preloading STT model...")
         stt_manager = STTModelManager(settings.stt)
@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Load TTS model if preload is enabled
     if settings.tts.preload_model:
-        from src.models.tts.model_manager import TTSModelManager, set_tts_model_manager
+        from voice_server.src.models.tts.model_manager import TTSModelManager, set_tts_model_manager
 
         logger.info("Preloading TTS model...")
         tts_manager = TTSModelManager(settings.tts)
@@ -112,8 +112,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await session_manager.shutdown()
 
     # Shutdown model managers
-    from src.models.stt.model_manager import _stt_model_manager
-    from src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.models.stt.model_manager import _stt_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
 
     if _stt_model_manager:
         await _stt_model_manager.shutdown()
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "src.main:app",
+        "voice_server.src.main:app",
         host=settings.host,
         port=settings.port,
         reload=True,  # Enable reload for development

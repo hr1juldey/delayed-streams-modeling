@@ -63,7 +63,7 @@ class DetailedFormatter(logging.Formatter):
 
         timestamp = datetime.now(timezone.utc).isoformat()
         base = f"[{timestamp}] {record.levelname:8} {record.name}:{record.module}:{record.funcName}:{record.lineno}\n"
-        message = f"{self.formatMessage(record)}\n"
+        message = f"{record.getMessage()}\n"
 
         if record.exc_info:
             base += f"{self.formatException(record.exc_info)}\n"

@@ -279,8 +279,10 @@ class KyutaiSTTModel(STTModelBase):
                             text_tokens = self.lm_gen.step(audio_tokens)
 
                 # Process actual audio
+                # Reshape to [batch, channels, time] for mimi encoder
+                audio_tensor = audio_tensor[None, None, :]  # [1, 1, time]
                 for audio_chunk in torch.split(
-                    audio_tensor[:, None], self.mimi.frame_size, dim=-1
+                    audio_tensor, self.mimi.frame_size, dim=-1
                 ):
                     session.chunk_count += 1
 
