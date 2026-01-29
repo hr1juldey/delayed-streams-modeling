@@ -1,0 +1,18 @@
+# Voice Server Development Dependencies
+#
+# Install development requirements with:
+# pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+httpx>=0.27.0
+
+# Code Quality
+ruff>=0.8.0
+mypy>=1.0.0
+
+# Optional: WebSocket client for testing
+# websockets>=14.0  # Already in main requirements
