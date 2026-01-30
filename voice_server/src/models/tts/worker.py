@@ -346,6 +346,10 @@ class TTSWorker:
             Audio as bytes (PCM int16).
         """
         try:
+            logger.info(f"Starting synthesis for text: '{text}'")
+            logger.info(f"Model is None: {self._model is None}")
+            logger.info(f"Model state is None: {self._model_state is None}")
+
             # Call pocket-tts generate_audio with model_state and text_to_generate
             # This is the actual CPU-bound TTS operation
             import torch
@@ -356,15 +360,21 @@ class TTSWorker:
                 text_to_generate=text,
             )
 
+            logger.info(f"Audio tensor shape: {audio_tensor.shape}")
+
             # Convert torch tensor to numpy
             audio_array = audio_tensor.cpu().numpy()
 
             # Convert float32 [-1, 1] to int16
             audio_int16 = (audio_array * 32767).astype(np.int16)
-            return audio_int16.tobytes()
+            result = audio_int16.tobytes()
+            logger.info(f"Synthesis complete: {len(result)} bytes")
+            return result
 
         except Exception as e:
             logger.error(f"Error in synchronous synthesis: {e}")
+            import traceback
+            traceback.print_exc()
             raise ModelException(f"Synthesis failed: {e}") from e
 
     @property

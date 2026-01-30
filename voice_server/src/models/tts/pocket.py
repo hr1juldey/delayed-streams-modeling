@@ -171,7 +171,7 @@ class PocketTTSModel(TTSModelBase):
                     text_offset=text_offset,
                 )
 
-                text_offset += len(chunk.text) if hasattr(chunk, "text") else 0
+                text_offset += len(chunk.text) if getattr(chunk, "text", None) else 0
 
         except Exception as e:
             logger.error(f"Failed to synthesize speech stream: {e}")

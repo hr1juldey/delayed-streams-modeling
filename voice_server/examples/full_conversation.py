@@ -263,7 +263,7 @@ class VoiceConversationClient:
 
         while True:
             try:
-                response = await asyncio.wait_for(self.tts_ws.recv(), timeout=5.0)
+                response = await asyncio.wait_for(self.tts_ws.recv(), timeout=60.0)
                 data = json.loads(response)
 
                 if data.get("type") == "Audio":
