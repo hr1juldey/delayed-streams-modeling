@@ -13,6 +13,7 @@ msgpack>=1.0.0
 
 # STT (Speech-to-Text)
 faster-whisper>=1.0.0
+julius>=0.2.0
 # TTS (Text-to-Speech)
 pocket-tts>=0.1.0
 

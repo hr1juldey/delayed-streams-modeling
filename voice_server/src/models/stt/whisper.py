@@ -3,14 +3,13 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 
 from voice_server.config.logging_config import get_logger
 from voice_server.src.models.stt.base import (
-    STTModelBase,
     STTConfig,
+    STTModelBase,
     STTModelName,
     STTResult,
     STTSegment,
@@ -39,8 +38,8 @@ class WhisperSTTModel(STTModelBase):
 
     def __init__(self, config: STTConfig):
         self.config = config
-        self._model: Optional[object] = None
-        self._executor: Optional[ThreadPoolExecutor] = None
+        self._model: object | None = None
+        self._executor: ThreadPoolExecutor | None = None
         self._sessions: dict[str, SessionState] = {}
         self._initialized = False
         self._streaming_active = False
@@ -81,7 +80,7 @@ class WhisperSTTModel(STTModelBase):
         self,
         audio: np.ndarray,
         session_id: str,
-    ) -> Optional[STTResult]:
+    ) -> STTResult | None:
         """Process audio chunk for streaming session."""
         if not self._initialized:
             raise RuntimeError("Whisper STT model not initialized")

@@ -4,12 +4,12 @@ Demonstrates connecting to the STT WebSocket endpoint and
 streaming audio for speech-to-text transcription.
 """
 
-import asyncio
 import argparse
+import asyncio
 import json
-import time
-import websockets
 from pathlib import Path
+
+import websockets
 
 
 async def test_stt_websocket(
@@ -42,6 +42,20 @@ async def test_stt_websocket(
     with open(audio_path, "rb") as f:
         audio_data = f.read()
 
+    # Check if it's a WAV file and skip header
+    if audio_data[:4] == b"RIFF" and audio_data[8:12] == b"WAVE":
+        # Skip WAV header (typically 44 bytes) to get raw PCM data
+        # Find the data chunk
+        data_offset = 12
+        while data_offset < len(audio_data) - 8:
+            chunk_id = audio_data[data_offset : data_offset + 4]
+            chunk_size = int.from_bytes(audio_data[data_offset + 4 : data_offset + 8], "little")
+            if chunk_id == b"data":
+                audio_data = audio_data[data_offset + 8 : data_offset + 8 + chunk_size]
+                break
+            data_offset += 8 + chunk_size
+        print(f"Loaded WAV audio: {len(audio_data)} bytes (raw PCM)")
+
     print(f"Loaded audio: {len(audio_data)} bytes")
 
     try:
@@ -66,7 +80,7 @@ async def test_stt_websocket(
             chunk_count = 0
 
             while offset < len(audio_data):
-                chunk = audio_data[offset:offset + chunk_size]
+                chunk = audio_data[offset : offset + chunk_size]
 
                 # Create audio message
                 message = {
@@ -80,6 +94,7 @@ async def test_stt_websocket(
                 if encoding == "json":
                     # Convert hex back to bytes on server side
                     import base64
+
                     message["data"] = base64.b64encode(chunk).decode("ascii")
 
                 await websocket.send(json.dumps(message))
@@ -91,9 +106,7 @@ async def test_stt_websocket(
 
                 # Receive and print any responses
                 try:
-                    response = await asyncio.wait_for(
-                        websocket.recv(), timeout=0.01
-                    )
+                    response = await asyncio.wait_for(websocket.recv(), timeout=0.01)
                     await handle_response(response)
                 except asyncio.TimeoutError:
                     pass
@@ -145,7 +158,7 @@ async def handle_response(response: str):
             elif is_final:
                 prefix = "[FINAL] "
 
-            print(f"{prefix}\"{text}\" (confidence: {confidence:.2f})")
+            print(f'{prefix}"{text}" (confidence: {confidence:.2f})')
 
         elif msg_type == "Eos":
             print("[EOS] End of stream")

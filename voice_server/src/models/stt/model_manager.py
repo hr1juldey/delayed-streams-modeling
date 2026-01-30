@@ -4,13 +4,12 @@ Manages STT model loading, warmup, and switching with session draining.
 """
 
 import asyncio
-from typing import Optional
 
 from voice_server.config.logging_config import get_logger
 from voice_server.config.settings import STTSettings
-from voice_server.src.models.stt.base import STTModelBase, STTConfig, STTModelName
-from voice_server.src.models.stt.whisper import WhisperSTTModel
 from voice_server.src.core.exceptions import ModelException
+from voice_server.src.models.stt.base import STTConfig, STTModelName
+from voice_server.src.models.stt.whisper import WhisperSTTModel
 
 logger = get_logger(__name__)
 
@@ -33,8 +32,8 @@ class STTModelManager:
             settings: STT configuration settings.
         """
         self.settings = settings
-        self._model: Optional[WhisperSTTModel] = None
-        self._current_model_name: Optional[STTModelName] = None
+        self._model: WhisperSTTModel | None = None
+        self._current_model_name: STTModelName | None = None
         self._lock = asyncio.Lock()
         self._active_sessions: set[str] = set()
 
@@ -279,9 +278,7 @@ class STTModelManager:
 
             if not drained and self._active_sessions:
                 # Force close remaining sessions
-                logger.warning(
-                    f"Force closing {len(self._active_sessions)} remaining sessions"
-                )
+                logger.warning(f"Force closing {len(self._active_sessions)} remaining sessions")
                 for session_id in list(self._active_sessions):
                     try:
                         await self.end_stream(session_id)
@@ -376,7 +373,7 @@ class STTModelManager:
 
 
 # Global STT model manager instance
-_stt_model_manager: Optional[STTModelManager] = None
+_stt_model_manager: STTModelManager | None = None
 
 
 async def get_stt_model_manager(settings: STTSettings | None = None) -> STTModelManager:
