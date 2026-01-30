@@ -11,6 +11,10 @@ pydantic>=2.0
 pydantic-settings>=2.0
 msgpack>=1.0.0
 
+# Voice Client SDK dependencies
+sounddevice>=0.4.6
+numpy>=1.20.0
+
 # STT (Speech-to-Text)
 faster-whisper>=1.0.0
 julius>=0.2.0
