@@ -8,6 +8,7 @@ import asyncio
 import itertools
 import math
 import time
+import threading
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor
 
@@ -174,7 +175,7 @@ class KyutaiSTTModel(STTModelBase):
             # Load checkpoint info from HuggingFace (using dedicated executor)
             self.checkpoint_info = await loop.run_in_executor(
                 self._executor,
-                moshi.models.loaders.CheckpointInfo.from_hf_repo,
+                self._load_checkpoint_info_with_cuda,
                 hf_repo,
             )
 
@@ -192,8 +193,7 @@ class KyutaiSTTModel(STTModelBase):
             # Load Mimi encoder (using dedicated executor)
             self.mimi = await loop.run_in_executor(
                 self._executor,
-                self.checkpoint_info.get_mimi,
-                self.device,
+                self._load_mimi_with_cuda,
             )
 
             # Load tokenizer
@@ -202,13 +202,14 @@ class KyutaiSTTModel(STTModelBase):
             # Load LM model (using dedicated executor)
             self.lm = await loop.run_in_executor(
                 self._executor,
-                self.checkpoint_info.get_moshi,
-                self.device,
-                torch.bfloat16,
+                self._load_moshi_with_cuda,
             )
 
-            # Create LM generator
-            self.lm_gen = moshi.models.LMGen(self.lm, temp=0, temp_text=0.0)
+            # Create LM generator in executor thread to ensure CUDA context
+            self.lm_gen = await loop.run_in_executor(
+                self._executor,
+                self._create_lm_gen,
+            )
 
             self._initialized = True
             logger.info(
@@ -218,6 +219,47 @@ class KyutaiSTTModel(STTModelBase):
         except Exception as e:
             logger.error(f"Failed to initialize Kyutai STT model: {e}")
             raise ModelException(f"Failed to initialize STT model: {e}") from e
+
+    def _load_checkpoint_info_with_cuda(self, hf_repo: str):
+        """Load checkpoint info with CUDA context set."""
+        if self.device.startswith("cuda"):
+            # Extract device index (e.g., "cuda" -> 0, "cuda:1" -> 1)
+            if ":" in self.device:
+                device_idx = int(self.device.split(":")[1])
+            else:
+                device_idx = 0
+            torch.cuda.set_device(device_idx)
+        return moshi.models.loaders.CheckpointInfo.from_hf_repo(hf_repo)
+
+    def _load_mimi_with_cuda(self):
+        """Load Mimi encoder with CUDA context set."""
+        if self.device.startswith("cuda"):
+            if ":" in self.device:
+                device_idx = int(self.device.split(":")[1])
+            else:
+                device_idx = 0
+            torch.cuda.set_device(device_idx)
+        return self.checkpoint_info.get_mimi(device=self.device)
+
+    def _load_moshi_with_cuda(self):
+        """Load Moshi LM with CUDA context set."""
+        if self.device.startswith("cuda"):
+            if ":" in self.device:
+                device_idx = int(self.device.split(":")[1])
+            else:
+                device_idx = 0
+            torch.cuda.set_device(device_idx)
+        return self.checkpoint_info.get_moshi(device=self.device, dtype=torch.bfloat16)
+
+    def _create_lm_gen(self):
+        """Create LM generator with CUDA context set."""
+        if self.device.startswith("cuda"):
+            if ":" in self.device:
+                device_idx = int(self.device.split(":")[1])
+            else:
+                device_idx = 0
+            torch.cuda.set_device(device_idx)
+        return moshi.models.LMGen(self.lm, temp=0, temp_text=0.0)
 
     async def start_stream(self, session_id: str) -> None:
         """Start a new streaming session."""
@@ -281,6 +323,14 @@ class KyutaiSTTModel(STTModelBase):
         session: SessionState,
     ) -> Optional[STTResult]:
         """Synchronous audio processing - must run in thread pool for CUDA consistency."""
+        # Ensure CUDA context is properly set in this thread
+        if self.device.startswith("cuda"):
+            if ":" in self.device:
+                device_idx = int(self.device.split(":")[1])
+            else:
+                device_idx = 0
+            torch.cuda.set_device(device_idx)
+
         # Convert to torch tensor
         audio_tensor = torch.from_numpy(audio).to(self.device)
 
@@ -395,6 +445,14 @@ class KyutaiSTTModel(STTModelBase):
 
     def _finalize_stream_sync(self, session: SessionState) -> STTResult:
         """Synchronous stream finalization - must run in thread pool for CUDA consistency."""
+        # Ensure CUDA context is properly set in this thread
+        if self.device.startswith("cuda"):
+            if ":" in self.device:
+                device_idx = int(self.device.split(":")[1])
+            else:
+                device_idx = 0
+            torch.cuda.set_device(device_idx)
+
         # Add delay suffix chunks
         silence_chunk = torch.zeros(
             (1, 1, self.mimi.frame_size),
@@ -458,6 +516,14 @@ class KyutaiSTTModel(STTModelBase):
 
     def _transcribe_sync(self, audio: np.ndarray) -> STTSegment:
         """Synchronous transcription - must run in thread pool for CUDA consistency."""
+        # Ensure CUDA context is properly set in this thread
+        if self.device.startswith("cuda"):
+            if ":" in self.device:
+                device_idx = int(self.device.split(":")[1])
+            else:
+                device_idx = 0
+            torch.cuda.set_device(device_idx)
+
         # Use the full transcription logic from stt_from_file_pytorch.py
         # This is a simplified version - full version would include timestamps
 
