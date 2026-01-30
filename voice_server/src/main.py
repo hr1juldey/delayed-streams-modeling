@@ -68,7 +68,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize session manager
     from voice_server.src.services.session.manager import SessionManager, set_session_manager
 
-    session_manager = SessionManager(settings.session)
+    # Construct full database path from ServerSettings
+    db_path = f"{settings.db_path}/sessions.db"
+    session_manager = SessionManager(settings.session, db_path=db_path)
     set_session_manager(session_manager)
     await session_manager.initialize()
     logger.info("Session manager initialized")

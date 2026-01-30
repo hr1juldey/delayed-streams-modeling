@@ -37,17 +37,19 @@ class SessionManager:
         self,
         settings: SessionSettings,
         store: Optional[SessionStoreBase] = None,
+        db_path: str = "./data/db/sessions.db",
     ):
         """Initialize the session manager.
 
         Args:
             settings: Session configuration settings.
             store: Optional session store. If not provided, creates from settings.
+            db_path: Database path for SQLite backend (relative to CWD).
         """
         self.settings = settings
         self.store = store or create_session_store(
             backend=settings.storage_backend,
-            db_path=settings.storage_backend,
+            db_path=db_path,
         )
 
         # Active sessions (in-memory)
