@@ -195,7 +195,7 @@ class PocketTTSModel(TTSModelBase):
             return float_array.tobytes()
         elif self.config.output_format == "wav":
             # Add WAV header
-            from src.utils.audio import add_wav_header
+            from voice_server.src.utils.audio import add_wav_header
 
             return add_wav_header(audio, self.config.sample_rate, channels=1)
         else:

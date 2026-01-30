@@ -165,9 +165,18 @@ class STTWebSocketHandler:
             stt_manager: STT model manager.
         """
         try:
-            # Get audio data
+            # Get audio data - handle both bytes (msgpack) and base64 strings (JSON)
             if isinstance(message.data, bytes):
                 audio_bytes = message.data
+            elif isinstance(message.data, str):
+                # JSON encoding - decode from base64
+                import base64
+                try:
+                    audio_bytes = base64.b64decode(message.data)
+                except Exception as e:
+                    logger.error(f"Failed to decode base64 audio data: {e}")
+                    await self._send_error("Invalid base64 audio data")
+                    return
             else:
                 logger.error(f"Invalid audio data type: {type(message.data)}")
                 await self._send_error("Invalid audio data format")

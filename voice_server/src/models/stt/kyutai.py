@@ -9,6 +9,7 @@ import itertools
 import math
 import time
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -145,6 +146,10 @@ class KyutaiSTTModel(STTModelBase):
         self._sessions: dict[str, SessionState] = {}
         self._sessions_lock = asyncio.Lock()
 
+        # Single-threaded executor for CUDA operations
+        # All CUDA operations must run in the same thread to maintain CUDA context
+        self._executor: Optional[ThreadPoolExecutor] = None
+
     async def initialize(self) -> None:
         """Initialize the model and load weights."""
         if self._initialized:
@@ -152,6 +157,11 @@ class KyutaiSTTModel(STTModelBase):
 
         try:
             logger.info(f"Loading Kyutai STT model: {self.model_name.value}")
+
+            # Create single-threaded executor for CUDA operations
+            # All CUDA operations must run in the same thread
+            loop = asyncio.get_event_loop()
+            self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="stt_cuda_")
 
             # Determine repo name
             if self.model_name == STTModelName.EN_FR_1B:
@@ -161,8 +171,9 @@ class KyutaiSTTModel(STTModelBase):
             else:
                 raise ValueError(f"Unknown model: {self.model_name}")
 
-            # Load checkpoint info from HuggingFace
-            self.checkpoint_info = await asyncio.to_thread(
+            # Load checkpoint info from HuggingFace (using dedicated executor)
+            self.checkpoint_info = await loop.run_in_executor(
+                self._executor,
                 moshi.models.loaders.CheckpointInfo.from_hf_repo,
                 hf_repo,
             )
@@ -178,20 +189,22 @@ class KyutaiSTTModel(STTModelBase):
                 "text_padding_token_id", 3
             )
 
-            # Load Mimi encoder
-            self.mimi = await asyncio.to_thread(
+            # Load Mimi encoder (using dedicated executor)
+            self.mimi = await loop.run_in_executor(
+                self._executor,
                 self.checkpoint_info.get_mimi,
-                device=self.device,
+                self.device,
             )
 
             # Load tokenizer
             self.tokenizer = self.checkpoint_info.get_text_tokenizer()
 
-            # Load LM model
-            self.lm = await asyncio.to_thread(
+            # Load LM model (using dedicated executor)
+            self.lm = await loop.run_in_executor(
+                self._executor,
                 self.checkpoint_info.get_moshi,
-                device=self.device,
-                dtype=torch.bfloat16,
+                self.device,
+                torch.bfloat16,
             )
 
             # Create LM generator
@@ -250,103 +263,117 @@ class KyutaiSTTModel(STTModelBase):
             raise RuntimeError(f"No active session for: {session_id}")
 
         try:
-            # Convert to torch tensor
-            audio_tensor = torch.from_numpy(audio).to(self.device)
-
-            # Resample if needed
-            if audio_tensor.shape[-1] % self.mimi.frame_size != 0:
-                to_pad = self.mimi.frame_size - audio_tensor.shape[-1] % self.mimi.frame_size
-                audio_tensor = torch.nn.functional.pad(audio_tensor, (0, to_pad))
-
-            # Create silence chunk for padding
-            silence_chunk = torch.zeros(
-                (1, 1, self.mimi.frame_size),
-                dtype=torch.float32,
-                device=self.device,
+            # Run CUDA operations in dedicated executor to maintain consistent CUDA context
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                self._executor,
+                self._process_audio_chunk_sync,
+                audio,
+                session,
             )
+        except Exception as e:
+            logger.error(f"Error processing audio chunk: {e}")
+            raise ModelException(f"Failed to process audio: {e}") from e
 
-            # Process in streaming context
-            with self.mimi.streaming(1), self.lm_gen.streaming(1):
-                # Add silence prefix on first chunk
-                if session.chunk_count == 0:
-                    for _ in range(session.silence_prefix_chunks):
-                        audio_tokens = self.mimi.encode(silence_chunk)
-                        if self.config.vad_mode == "server":
-                            text_tokens, vad_heads = self.lm_gen.step_with_extra_heads(
-                                audio_tokens
-                            )
-                        else:
-                            text_tokens = self.lm_gen.step(audio_tokens)
+    def _process_audio_chunk_sync(
+        self,
+        audio: np.ndarray,
+        session: SessionState,
+    ) -> Optional[STTResult]:
+        """Synchronous audio processing - must run in thread pool for CUDA consistency."""
+        # Convert to torch tensor
+        audio_tensor = torch.from_numpy(audio).to(self.device)
 
-                # Process actual audio
-                # Reshape to [batch, channels, time] for mimi encoder
-                audio_tensor = audio_tensor[None, None, :]  # [1, 1, time]
-                for audio_chunk in torch.split(
-                    audio_tensor, self.mimi.frame_size, dim=-1
-                ):
-                    session.chunk_count += 1
+        # Resample if needed
+        if audio_tensor.shape[-1] % self.mimi.frame_size != 0:
+            to_pad = self.mimi.frame_size - audio_tensor.shape[-1] % self.mimi.frame_size
+            audio_tensor = torch.nn.functional.pad(audio_tensor, (0, to_pad))
 
-                    # Encode audio
-                    audio_tokens = self.mimi.encode(audio_chunk)
+        # Create silence chunk for padding
+        silence_chunk = torch.zeros(
+            (1, 1, self.mimi.frame_size),
+            dtype=torch.float32,
+            device=self.device,
+        )
 
-                    # Step LM
+        # Process in streaming context
+        with self.mimi.streaming(1), self.lm_gen.streaming(1):
+            # Add silence prefix on first chunk
+            if session.chunk_count == 0:
+                for _ in range(session.silence_prefix_chunks):
+                    audio_tokens = self.mimi.encode(silence_chunk)
                     if self.config.vad_mode == "server":
                         text_tokens, vad_heads = self.lm_gen.step_with_extra_heads(
                             audio_tokens
                         )
-
-                        # Check VAD
-                        if vad_heads:
-                            pr_vad = vad_heads[2][0, 0, 0].cpu().item()
-                            if pr_vad > 0.5:
-                                # End of speech detected
-                                logger.debug(f"VAD detected end of speech: {session_id}")
-                                # Return final result
-                                final_text = session.get_final_result()
-                                session.reset_partial()
-                                return STTResult(
-                                    text=final_text,
-                                    is_partial=False,
-                                    is_final=True,
-                                    confidence=0.9,  # VAD confidence
-                                    timestamp_start=0.0,
-                                    timestamp_end=time.time() - session.start_time,
-                                )
                     else:
                         text_tokens = self.lm_gen.step(audio_tokens)
 
-                    # Accumulate tokens
-                    session.text_tokens_accum.append(text_tokens)
+            # Process actual audio
+            # Reshape to [batch, channels, time] for mimi encoder
+            audio_tensor = audio_tensor[None, None, :]  # [1, 1, time]
+            for audio_chunk in torch.split(
+                audio_tensor, self.mimi.frame_size, dim=-1
+            ):
+                session.chunk_count += 1
 
-                    # Get new text
-                    new_text = session.add_tokens(text_tokens)
+                # Encode audio
+                audio_tokens = self.mimi.encode(audio_chunk)
 
-                    # Determine if we should return a result
-                    now = time.time()
-                    time_since_last = now - session.last_result_time
-                    should_return = False
+                # Step LM
+                if self.config.vad_mode == "server":
+                    text_tokens, vad_heads = self.lm_gen.step_with_extra_heads(
+                        audio_tokens
+                    )
 
-                    if self.config.streaming_mode in ("partial", "both"):
-                        # Return partial result periodically
-                        if new_text and time_since_last > 0.1:  # Max 10 partial per second
-                            should_return = True
+                    # Check VAD
+                    if vad_heads:
+                        pr_vad = vad_heads[2][0, 0, 0].cpu().item()
+                        if pr_vad > 0.5:
+                            # End of speech detected
+                            logger.debug(f"VAD detected end of speech: {session.session_id}")
+                            # Return final result
+                            final_text = session.get_final_result()
+                            session.reset_partial()
+                            return STTResult(
+                                text=final_text,
+                                is_partial=False,
+                                is_final=True,
+                                confidence=0.9,  # VAD confidence
+                                timestamp_start=0.0,
+                                timestamp_end=time.time() - session.start_time,
+                            )
+                else:
+                    text_tokens = self.lm_gen.step(audio_tokens)
 
-                    if should_return:
-                        session.last_result_time = now
-                        return STTResult(
-                            text=session.get_partial_result(),
-                            is_partial=True,
-                            is_final=False,
-                            confidence=0.7,  # Partial result confidence
-                            timestamp_start=0.0,
-                            timestamp_end=time.time() - session.start_time,
-                        )
+                # Accumulate tokens
+                session.text_tokens_accum.append(text_tokens)
 
-            return None
+                # Get new text
+                new_text = session.add_tokens(text_tokens)
 
-        except Exception as e:
-            logger.error(f"Error processing audio chunk: {e}")
-            raise ModelException(f"Failed to process audio: {e}") from e
+                # Determine if we should return a result
+                now = time.time()
+                time_since_last = now - session.last_result_time
+                should_return = False
+
+                if self.config.streaming_mode in ("partial", "both"):
+                    # Return partial result periodically
+                    if new_text and time_since_last > 0.1:  # Max 10 partial per second
+                        should_return = True
+
+                if should_return:
+                    session.last_result_time = now
+                    return STTResult(
+                        text=session.get_partial_result(),
+                        is_partial=True,
+                        is_final=False,
+                        confidence=0.7,  # Partial result confidence
+                        timestamp_start=0.0,
+                        timestamp_end=time.time() - session.start_time,
+                    )
+
+        return None
 
     async def finalize_stream(self, session_id: str) -> STTResult:
         """Finalize a streaming session and get final result."""
@@ -355,41 +382,50 @@ class KyutaiSTTModel(STTModelBase):
             raise RuntimeError(f"No active session for: {session_id}")
 
         try:
-            # Add delay suffix chunks
-            silence_chunk = torch.zeros(
-                (1, 1, self.mimi.frame_size),
-                dtype=torch.float32,
-                device=self.device,
+            # Run CUDA operations in dedicated executor to maintain consistent CUDA context
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                self._executor,
+                self._finalize_stream_sync,
+                session,
             )
-
-            with self.mimi.streaming(1), self.lm_gen.streaming(1):
-                for _ in range(session.delay_chunks):
-                    audio_tokens = self.mimi.encode(silence_chunk)
-                    if self.config.vad_mode == "server":
-                        text_tokens, vad_heads = self.lm_gen.step_with_extra_heads(
-                            audio_tokens
-                        )
-                    else:
-                        text_tokens = self.lm_gen.step(audio_tokens)
-                    session.text_tokens_accum.append(text_tokens)
-                    session.add_tokens(text_tokens)
-
-            # Get final text
-            final_text = session.get_final_result()
-            duration = time.time() - session.start_time
-
-            return STTResult(
-                text=final_text,
-                is_partial=False,
-                is_final=True,
-                confidence=0.9,
-                timestamp_start=0.0,
-                timestamp_end=duration,
-            )
-
         except Exception as e:
             logger.error(f"Error finalizing stream: {e}")
             raise ModelException(f"Failed to finalize stream: {e}") from e
+
+    def _finalize_stream_sync(self, session: SessionState) -> STTResult:
+        """Synchronous stream finalization - must run in thread pool for CUDA consistency."""
+        # Add delay suffix chunks
+        silence_chunk = torch.zeros(
+            (1, 1, self.mimi.frame_size),
+            dtype=torch.float32,
+            device=self.device,
+        )
+
+        with self.mimi.streaming(1), self.lm_gen.streaming(1):
+            for _ in range(session.delay_chunks):
+                audio_tokens = self.mimi.encode(silence_chunk)
+                if self.config.vad_mode == "server":
+                    text_tokens, vad_heads = self.lm_gen.step_with_extra_heads(
+                        audio_tokens
+                    )
+                else:
+                    text_tokens = self.lm_gen.step(audio_tokens)
+                session.text_tokens_accum.append(text_tokens)
+                session.add_tokens(text_tokens)
+
+        # Get final text
+        final_text = session.get_final_result()
+        duration = time.time() - session.start_time
+
+        return STTResult(
+            text=final_text,
+            is_partial=False,
+            is_final=True,
+            confidence=0.9,
+            timestamp_start=0.0,
+            timestamp_end=duration,
+        )
 
     async def end_stream(self, session_id: str) -> None:
         """End a streaming session."""
@@ -408,68 +444,78 @@ class KyutaiSTTModel(STTModelBase):
             raise RuntimeError("Model not initialized")
 
         try:
-            # Use the full transcription logic from stt_from_file_pytorch.py
-            # This is a simplified version - full version would include timestamps
-
-            audio_tensor = torch.from_numpy(audio).to(self.device)
-            audio_tensor = julius.resample_frac(
-                audio_tensor, 24000, self.mimi.sample_rate
+            # Run CUDA operations in dedicated executor to maintain consistent CUDA context
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                self._executor,
+                self._transcribe_sync,
+                audio,
             )
-
-            # Pad to frame size
-            if audio_tensor.shape[-1] % self.mimi.frame_size != 0:
-                to_pad = self.mimi.frame_size - audio_tensor.shape[-1] % self.mimi.frame_size
-                audio_tensor = torch.nn.functional.pad(audio_tensor, (0, to_pad))
-
-            # Process all chunks
-            text_tokens_accum = []
-            n_prefix_chunks = math.ceil(
-                self.audio_silence_prefix_seconds * self.mimi.frame_rate
-            )
-            n_delay_chunks = math.ceil(self.audio_delay_seconds * self.mimi.frame_rate)
-
-            silence_chunk = torch.zeros(
-                (1, 1, self.mimi.frame_size), dtype=torch.float32, device=self.device
-            )
-
-            chunks = itertools.chain(
-                itertools.repeat(silence_chunk, n_prefix_chunks),
-                torch.split(audio_tensor[:, None], self.mimi.frame_size, dim=-1),
-                itertools.repeat(silence_chunk, n_delay_chunks),
-            )
-
-            start_time = time.time()
-            with self.mimi.streaming(1), self.lm_gen.streaming(1):
-                for audio_chunk in chunks:
-                    audio_tokens = self.mimi.encode(audio_chunk)
-                    text_tokens = self.lm_gen.step(audio_tokens)
-                    text_tokens_accum.append(text_tokens)
-
-            duration = time.time() - start_time
-
-            # Decode tokens to text
-            utterance_tokens = torch.concat(text_tokens_accum, dim=-1)
-
-            # Extract timestamped words
-            words = await self._extract_timestamped_words(
-                utterance_tokens,
-                n_prefix_chunks,
-            )
-
-            # Combine words into full text
-            full_text = " ".join([w["text"] for w in words])
-
-            return STTSegment(
-                text=full_text,
-                words=words,
-                start_time=0.0,
-                end_time=duration,
-                confidence=0.9,
-            )
-
+            return result
         except Exception as e:
             logger.error(f"Error transcribing audio: {e}")
             raise ModelException(f"Failed to transcribe audio: {e}") from e
+
+    def _transcribe_sync(self, audio: np.ndarray) -> STTSegment:
+        """Synchronous transcription - must run in thread pool for CUDA consistency."""
+        # Use the full transcription logic from stt_from_file_pytorch.py
+        # This is a simplified version - full version would include timestamps
+
+        audio_tensor = torch.from_numpy(audio).to(self.device)
+        audio_tensor = julius.resample_frac(
+            audio_tensor, 24000, self.mimi.sample_rate
+        )
+
+        # Pad to frame size
+        if audio_tensor.shape[-1] % self.mimi.frame_size != 0:
+            to_pad = self.mimi.frame_size - audio_tensor.shape[-1] % self.mimi.frame_size
+            audio_tensor = torch.nn.functional.pad(audio_tensor, (0, to_pad))
+
+        # Process all chunks
+        text_tokens_accum = []
+        n_prefix_chunks = math.ceil(
+            self.audio_silence_prefix_seconds * self.mimi.frame_rate
+        )
+        n_delay_chunks = math.ceil(self.audio_delay_seconds * self.mimi.frame_rate)
+
+        silence_chunk = torch.zeros(
+            (1, 1, self.mimi.frame_size), dtype=torch.float32, device=self.device
+        )
+
+        chunks = itertools.chain(
+            itertools.repeat(silence_chunk, n_prefix_chunks),
+            torch.split(audio_tensor[:, None], self.mimi.frame_size, dim=-1),
+            itertools.repeat(silence_chunk, n_delay_chunks),
+        )
+
+        start_time = time.time()
+        with self.mimi.streaming(1), self.lm_gen.streaming(1):
+            for audio_chunk in chunks:
+                audio_tokens = self.mimi.encode(audio_chunk)
+                text_tokens = self.lm_gen.step(audio_tokens)
+                text_tokens_accum.append(text_tokens)
+
+        duration = time.time() - start_time
+
+        # Decode tokens to text
+        utterance_tokens = torch.concat(text_tokens_accum, dim=-1)
+
+        # Extract timestamped words (this is already thread-safe, runs inline)
+        words = self._extract_timestamped_words_sync(
+            utterance_tokens,
+            n_prefix_chunks,
+        )
+
+        # Combine words into full text
+        full_text = " ".join([w["text"] for w in words])
+
+        return STTSegment(
+            text=full_text,
+            words=words,
+            start_time=0.0,
+            end_time=duration,
+            confidence=0.9,
+        )
 
     async def _extract_timestamped_words(
         self,
@@ -580,7 +626,16 @@ class KyutaiSTTModel(STTModelBase):
 
         logger.info(f"Switching STT model from {self.model_name} to {new_model_name}")
 
-        # Unload current model
+        # Shutdown old executor and unload current model
+        if self._executor:
+            self._executor.shutdown(wait=True)
+            self._executor = None
+
+        self.checkpoint_info = None
+        self.mimi = None
+        self.tokenizer = None
+        self.lm = None
+        self.lm_gen = None
         self._initialized = False
 
         # Update config and reload
@@ -609,3 +664,28 @@ class KyutaiSTTModel(STTModelBase):
     def get_active_sessions(self) -> set[str]:
         """Get set of active session IDs."""
         return set(self._sessions.keys())
+
+    async def shutdown(self) -> None:
+        """Shutdown the model and cleanup resources.
+
+        Properly closes the executor and clears model references.
+        """
+        logger.info("Shutting down Kyutai STT model...")
+
+        # Close all sessions
+        self._sessions.clear()
+
+        # Shutdown executor
+        if self._executor:
+            self._executor.shutdown(wait=True)
+            self._executor = None
+
+        # Clear model references to free memory
+        self.checkpoint_info = None
+        self.mimi = None
+        self.tokenizer = None
+        self.lm = None
+        self.lm_gen = None
+
+        self._initialized = False
+        logger.info("Kyutai STT model shutdown complete")

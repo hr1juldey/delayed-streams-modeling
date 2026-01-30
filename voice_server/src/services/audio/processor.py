@@ -68,7 +68,7 @@ class AudioProcessor:
             elif input_format == "float32":
                 audio = bytes_to_float32(audio_data)
             elif input_format == "wav":
-                from src.utils.audio import parse_wav
+                from voice_server.src.utils.audio import parse_wav
                 audio_bytes, sr, _, _ = parse_wav(audio_data)
                 audio = int16_to_float32(audio_bytes)
                 # Resample if needed

@@ -202,7 +202,7 @@ class HeartbeatMonitor:
             stats.ping_count += 1
 
             # Create ping message
-            from src.services.websocket.protocol import Message
+            from voice_server.src.services.websocket.protocol import Message
 
             ping_message = Message(
                 type=MessageType.HEARTBEAT,

@@ -21,7 +21,7 @@ class STTSettings(BaseModel):
     model_name: Literal["1b-en_fr", "2.6b-en"] = "1b-en_fr"
     device: str = "cuda"
     preload_model: bool = True
-    warmup_on_startup: bool = True
+    warmup_on_startup: bool = False  # Disabled due to potential CUDA issues
     vad_mode: Literal["client", "server"] = "client"
     streaming_mode: Literal["partial", "final", "both"] = "both"
     confidence_threshold: float = 0.5

@@ -19,6 +19,7 @@ dependencies = [
     "prometheus-client>=0.21.0",
     "aiosqlite>=0.20.0",
     "python-multipart>=0.0.9",
+    "openai-whisper>=20250625",
 ]
 
 [project.optional-dependencies]

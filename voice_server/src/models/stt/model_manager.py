@@ -100,12 +100,28 @@ class STTModelManager:
             warmup_session = "_warmup"
             await self._model.start_stream(warmup_session)
 
-            # Process dummy chunk
-            await self._model.process_audio_chunk(dummy_audio, warmup_session)
+            # Process dummy chunk - wrap in try-except for safety
+            try:
+                await self._model.process_audio_chunk(dummy_audio, warmup_session)
+            except Exception as inner_e:
+                logger.warning(f"STT warmup audio processing failed: {inner_e}")
+                # Still try to cleanup
+                try:
+                    await self._model.end_stream(warmup_session)
+                except Exception:
+                    pass
+                return
 
             # Finalize and cleanup
-            await self._model.finalize_stream(warmup_session)
-            await self._model.end_stream(warmup_session)
+            try:
+                await self._model.finalize_stream(warmup_session)
+            except Exception as inner_e:
+                logger.warning(f"STT warmup finalize failed: {inner_e}")
+
+            try:
+                await self._model.end_stream(warmup_session)
+            except Exception as inner_e:
+                logger.warning(f"STT warmup cleanup failed: {inner_e}")
 
             logger.info("STT model warmup complete")
 
@@ -345,6 +361,12 @@ class STTModelManager:
                 await self.end_stream(session_id)
             except Exception as e:
                 logger.error(f"Error ending session {session_id}: {e}")
+
+        # Shutdown the model (closes executor and frees memory)
+        try:
+            await self._model.shutdown()
+        except Exception as e:
+            logger.error(f"Error shutting down model: {e}")
 
         # Clear model reference
         self._model = None
