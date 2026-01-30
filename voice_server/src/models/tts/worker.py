@@ -79,6 +79,7 @@ class TTSWorker:
         """
         self._tts_model_class = tts_model_class
         self._model = None
+        self._model_state = None  # Pocket TTS model state
         self._status = WorkerStatus.STOPPED
         self._request_queue: asyncio.Queue[TTSRequest] = asyncio.Queue()
         self._response_queues: dict[str, asyncio.Queue] = {}
@@ -99,7 +100,7 @@ class TTSWorker:
 
         try:
             # Load model in thread pool
-            self._model = await asyncio.to_thread(self._load_model_sync)
+            self._model, self._model_state = await asyncio.to_thread(self._load_model_sync)
 
             # Start worker task
             self._worker_task = asyncio.create_task(self._worker_loop())
@@ -122,7 +123,14 @@ class TTSWorker:
             logger.info("Loading Pocket TTS model...")
             model = self._tts_model_class.load_model()
             logger.info("Pocket TTS model loaded")
-            return model
+
+            # Get model state for default voice (alba)
+            # Use _cached_get_state_for_audio_prompt for predefined voices
+            logger.info("Loading default voice state...")
+            model_state = model._cached_get_state_for_audio_prompt("alba")
+            logger.info("Default voice state loaded")
+
+            return model, model_state
         except Exception as e:
             logger.error(f"Failed to load TTS model: {e}")
             raise
@@ -145,6 +153,7 @@ class TTSWorker:
 
         # Clear model
         self._model = None
+        self._model_state = None
         self._response_queues.clear()
 
         self._status = WorkerStatus.STOPPED
@@ -337,16 +346,22 @@ class TTSWorker:
             Audio as bytes (PCM int16).
         """
         try:
-            # Call pocket-tts generate_audio
+            # Call pocket-tts generate_audio with model_state and text_to_generate
             # This is the actual CPU-bound TTS operation
-            audio_array = self._model.generate_audio(text)
+            import torch
+            import numpy as np
 
-            # Convert to bytes if needed
-            if hasattr(audio_array, "tobytes"):
-                return audio_array.tobytes()
-            else:
-                # Assume it's already bytes
-                return audio_array
+            audio_tensor = self._model.generate_audio(
+                model_state=self._model_state,
+                text_to_generate=text,
+            )
+
+            # Convert torch tensor to numpy
+            audio_array = audio_tensor.cpu().numpy()
+
+            # Convert float32 [-1, 1] to int16
+            audio_int16 = (audio_array * 32767).astype(np.int16)
+            return audio_int16.tobytes()
 
         except Exception as e:
             logger.error(f"Error in synchronous synthesis: {e}")

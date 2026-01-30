@@ -5,6 +5,7 @@ Supports both JSON and MessagePack encoding for efficient message transmission.
 
 import json
 import msgpack
+import base64
 import time
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -152,6 +153,11 @@ class MessageProtocol:
             data = asdict(msg)
             data["type"] = msg.type.value  # Convert enum to string
 
+            # For Audio messages with JSON encoding, base64 encode the audio data
+            if msg.type == MessageType.AUDIO and self.encoding == "json":
+                if isinstance(data.get("data"), bytes):
+                    data["data"] = base64.b64encode(data["data"]).decode("ascii")
+
             if self.encoding == "msgpack":
                 return msgpack.packb(data, use_bin_type=True)
             else:
@@ -201,6 +207,20 @@ class MessageProtocol:
                     except ValueError:
                         logger.warning(f"Unknown message type: {msg_type}")
                         decoded["type"] = MessageType.ERROR
+
+            # For Audio messages with JSON encoding, base64 decode the audio data
+            msg_type = decoded.get("type")
+            is_audio = isinstance(msg_type, str) and msg_type == "Audio"
+            if not is_audio and isinstance(msg_type, MessageType):
+                is_audio = msg_type == MessageType.AUDIO
+
+            if is_audio and self.encoding == "json":
+                data_value = decoded.get("data")
+                if isinstance(data_value, str):
+                    try:
+                        decoded["data"] = base64.b64decode(data_value)
+                    except Exception:
+                        pass  # Keep as-is if not valid base64
 
             # Create appropriate message subclass based on type
             msg_type = decoded["type"]

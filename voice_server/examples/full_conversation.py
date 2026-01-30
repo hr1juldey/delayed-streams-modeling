@@ -56,25 +56,29 @@ class VoiceConversationClient:
         print("TTS connected!")
 
         # Configure STT
-        await self.stt_ws.send(json.dumps({
-            "type": "Config",
-            "data": {
-                "streaming_mode": "both",
-                "input_format": "int16",
-            },
-            "session_id": "conversation",
-        }))
+        await self.stt_ws.send(
+            json.dumps({
+                "type": "Config",
+                "data": {
+                    "streaming_mode": "both",
+                    "input_format": "int16",
+                },
+                "session_id": "conversation",
+            })
+        )
 
         # Configure TTS
-        await self.tts_ws.send(json.dumps({
-            "type": "Config",
-            "data": {
-                "voice_id": "default",
-                "output_format": "pcm_int16",
-                "streaming": True,
-            },
-            "session_id": "conversation",
-        }))
+        await self.tts_ws.send(
+            json.dumps({
+                "type": "Config",
+                "data": {
+                    "voice_id": "default",
+                    "output_format": "pcm_int16",
+                    "streaming": True,
+                },
+                "session_id": "conversation",
+            })
+        )
 
         print("Configured both endpoints!")
 
@@ -115,12 +119,12 @@ class VoiceConversationClient:
             print("No transcription received!")
             return
 
-        print(f"\nUser said: \"{transcription}\"")
+        print(f'\nUser said: "{transcription}"')
 
         # Step 2: Process with agent (you can integrate your agent here)
         print("\n=== Step 2: Processing with agent ===")
         response_text = await self._process_with_agent(transcription, agent_response)
-        print(f"Agent response: \"{response_text}\"")
+        print(f'Agent response: "{response_text}"')
 
         # Step 3: Synthesize agent response with TTS
         print("\n=== Step 3: Synthesizing agent response ===")
@@ -153,7 +157,7 @@ class VoiceConversationClient:
         final_text = ""
 
         while offset < len(audio_data):
-            chunk = audio_data[offset:offset + chunk_size]
+            chunk = audio_data[offset : offset + chunk_size]
 
             message = {
                 "type": "Audio",
@@ -170,11 +174,13 @@ class VoiceConversationClient:
                 print(f"  [Partial] {response}")
 
         # Send EOS and get final result
-        await self.stt_ws.send(json.dumps({
-            "type": "Eos",
-            "data": None,
-            "session_id": "conversation",
-        }))
+        await self.stt_ws.send(
+            json.dumps({
+                "type": "Eos",
+                "data": None,
+                "session_id": "conversation",
+            })
+        )
 
         # Get final transcription
         while True:
@@ -211,11 +217,7 @@ class VoiceConversationClient:
         except asyncio.TimeoutError:
             return None
 
-    async def _process_with_agent(
-        self,
-        user_text: str,
-        agent_response: str = None
-    ) -> str:
+    async def _process_with_agent(self, user_text: str, agent_response: str = None) -> str:
         """Process user text with an agent.
 
         This is where you would integrate your AI agent (DSPy, Ollama, etc.).
@@ -244,14 +246,16 @@ class VoiceConversationClient:
             text: Text to synthesize.
             save_output: Optional file to save audio.
         """
-        print(f"Synthesizing: \"{text}\"")
+        print(f'Synthesizing: "{text}"')
 
         # Send text to TTS
-        await self.tts_ws.send(json.dumps({
-            "type": "Text",
-            "data": text,
-            "session_id": "conversation",
-        }))
+        await self.tts_ws.send(
+            json.dumps({
+                "type": "Text",
+                "data": text,
+                "session_id": "conversation",
+            })
+        )
 
         # Receive audio chunks
         audio_chunks = []
@@ -296,9 +300,7 @@ class VoiceConversationClient:
 
 async def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Full Voice Conversation Example"
-    )
+    parser = argparse.ArgumentParser(description="Full Voice Conversation Example")
     parser.add_argument(
         "audio_file",
         help="Input audio file (user speech)",
