@@ -154,13 +154,20 @@ class BaseClient:
             message.session_id = self._session_id or ""
 
         encoded = self.encoder.encode(message)
-        await self._ws.send(encoded)
+        # JSON encoding uses text frames, MessagePack uses binary frames
+        if self.encoding == "json":
+            await self._ws.send(encoded.decode("utf-8"))
+        else:
+            await self._ws.send(encoded)
 
     async def _message_loop(self) -> None:
         """Background task to receive and handle messages."""
         while self._running and self._ws:
             try:
                 raw = await asyncio.wait_for(self._ws.recv(), timeout=1.0)
+                # Convert text to bytes for decoding if needed
+                if isinstance(raw, str):
+                    raw = raw.encode("utf-8")
                 message = self.encoder.decode(raw)
 
                 # Call registered handlers
