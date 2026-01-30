@@ -276,25 +276,22 @@ class TTSModelManager:
 _tts_model_manager: Optional[TTSModelManager] = None
 
 
-async def get_tts_model_manager(settings: TTSSettings) -> TTSModelManager:
-    """Get or create the global TTS model manager.
+async def get_tts_model_manager(settings: TTSSettings | None = None) -> TTSModelManager:
+    """Get the global TTS model manager.
 
     Args:
-        settings: TTS configuration settings.
+        settings: Ignored - kept for compatibility. Settings from initialization are used.
 
     Returns:
         TTSModelManager instance.
 
     Raises:
-        RuntimeError: If manager is already initialized with different settings.
+        RuntimeError: If manager has not been initialized.
     """
     global _tts_model_manager
 
     if _tts_model_manager is None:
-        _tts_model_manager = TTSModelManager(settings)
-        await _tts_model_manager.initialize()
-    elif _tts_model_manager.settings != settings:
-        logger.warning("TTS manager already initialized with different settings")
+        raise RuntimeError("TTS model manager not initialized. Call set_tts_model_manager first.")
 
     return _tts_model_manager
 

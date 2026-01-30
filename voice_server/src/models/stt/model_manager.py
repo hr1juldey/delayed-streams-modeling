@@ -357,25 +357,22 @@ class STTModelManager:
 _stt_model_manager: Optional[STTModelManager] = None
 
 
-async def get_stt_model_manager(settings: STTSettings) -> STTModelManager:
-    """Get or create the global STT model manager.
+async def get_stt_model_manager(settings: STTSettings | None = None) -> STTModelManager:
+    """Get the global STT model manager.
 
     Args:
-        settings: STT configuration settings.
+        settings: Ignored - kept for compatibility. Settings from initialization are used.
 
     Returns:
         STTModelManager instance.
 
     Raises:
-        RuntimeError: If manager is already initialized with different settings.
+        RuntimeError: If manager has not been initialized.
     """
     global _stt_model_manager
 
     if _stt_model_manager is None:
-        _stt_model_manager = STTModelManager(settings)
-        await _stt_model_manager.initialize()
-    elif _stt_model_manager.settings != settings:
-        logger.warning("STT manager already initialized with different settings")
+        raise RuntimeError("STT model manager not initialized. Call set_stt_model_manager first.")
 
     return _stt_model_manager
 

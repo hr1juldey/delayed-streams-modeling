@@ -188,14 +188,19 @@ class MessageProtocol:
             else:
                 decoded = json.loads(data.decode("utf-8"))
 
-            # Convert type string back to enum
+            # Convert type string back to enum (case-insensitive)
             msg_type = decoded.get("type")
             if msg_type:
                 try:
+                    # Try direct match first
                     decoded["type"] = MessageType(msg_type)
                 except ValueError:
-                    logger.warning(f"Unknown message type: {msg_type}")
-                    decoded["type"] = MessageType.ERROR
+                    # Try case-insensitive match
+                    try:
+                        decoded["type"] = MessageType(msg_type.capitalize())
+                    except ValueError:
+                        logger.warning(f"Unknown message type: {msg_type}")
+                        decoded["type"] = MessageType.ERROR
 
             # Create appropriate message subclass based on type
             msg_type = decoded["type"]

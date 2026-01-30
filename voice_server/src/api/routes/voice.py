@@ -40,7 +40,7 @@ async def upload_voice(
         HTTPException: If upload fails.
     """
     # Check if TTS model is initialized
-    from src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
 
     if _tts_model_manager is None:
         raise HTTPException(
@@ -102,7 +102,7 @@ async def list_voices():
     Returns:
         List of voice information.
     """
-    from src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
 
     if _tts_model_manager is None:
         return {
@@ -138,7 +138,7 @@ async def switch_voice(voice_id: str):
     Returns:
         Success message.
     """
-    from src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
 
     if _tts_model_manager is None:
         raise HTTPException(
@@ -174,7 +174,7 @@ async def get_voice(voice_id: str):
     Returns:
         Voice information.
     """
-    from src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
 
     if _tts_model_manager is None:
         raise HTTPException(
@@ -262,7 +262,7 @@ async def set_voice_parameters(
     Returns:
         Current parameters.
     """
-    from src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
 
     if _tts_model_manager is None:
         raise HTTPException(

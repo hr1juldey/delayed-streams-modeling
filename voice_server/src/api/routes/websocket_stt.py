@@ -71,7 +71,7 @@ class STTWebSocketHandler:
         """Main handler for the WebSocket connection."""
         try:
             # Get STT model manager
-            stt_manager = await get_stt_model_manager(self.settings.stt)
+            stt_manager = await get_stt_model_manager()
 
             # Start STT stream
             self._stt_session_id = f"stt_{self.session_id}"
@@ -283,7 +283,7 @@ class STTWebSocketHandler:
         # End STT stream
         if self._stt_session_id:
             try:
-                stt_manager = await get_stt_model_manager(self.settings.stt)
+                stt_manager = await get_stt_model_manager()
                 await stt_manager.end_stream(self._stt_session_id)
             except Exception as e:
                 logger.error(f"Error ending STT stream: {e}")
@@ -337,19 +337,17 @@ async def stt_websocket(websocket: WebSocket):
     encoding = websocket.query_params.get("encoding", "json")
 
     # Get connection manager
-    from src.services.websocket.connection import get_connection_manager
+    from voice_server.src.services.websocket.connection import get_connection_manager
 
     try:
         connection_manager = get_connection_manager()
     except RuntimeError:
         # Connection manager not initialized - create temporary one
-        from src.services.websocket.connection import ConnectionManager
+        from voice_server.src.services.websocket.connection import ConnectionManager
 
         connection_manager = ConnectionManager(settings)
 
     # Accept connection
-    protocol = MessageProtocol(encoding=encoding)
-
     try:
         conn_info = await connection_manager.connect(websocket, session_id, encoding)
     except (RuntimeError, ValueError) as e:
@@ -358,9 +356,9 @@ async def stt_websocket(websocket: WebSocket):
 
     logger.info(f"STT WebSocket connected: {session_id}")
 
-    # Create handler and run
+    # Create handler and run (use protocol from conn_info)
     handler = STTWebSocketHandler(
-        websocket, session_id, settings, connection_manager, protocol
+        websocket, session_id, settings, connection_manager, conn_info.protocol
     )
 
     try:

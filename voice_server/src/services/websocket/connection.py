@@ -173,8 +173,13 @@ class ConnectionManager:
             # Encode message
             data = conn_info.protocol.encode(message)
 
-            # Send via WebSocket
-            await conn_info.websocket.send_bytes(data)
+            # Send via WebSocket (text for JSON, binary for msgpack)
+            if conn_info.protocol.encoding == "json":
+                # Decode bytes to string for text frame
+                await conn_info.websocket.send_text(data.decode("utf-8"))
+            else:
+                # Send binary frame for msgpack
+                await conn_info.websocket.send_bytes(data)
             conn_info.update_activity()
 
             return True
@@ -206,7 +211,11 @@ class ConnectionManager:
 
                 try:
                     data = conn_info.protocol.encode(message)
-                    await conn_info.websocket.send_bytes(data)
+                    # Send via WebSocket (text for JSON, binary for msgpack)
+                    if conn_info.protocol.encoding == "json":
+                        await conn_info.websocket.send_text(data.decode("utf-8"))
+                    else:
+                        await conn_info.websocket.send_bytes(data)
                     conn_info.update_activity()
                     sent_count += 1
 
@@ -233,27 +242,25 @@ class ConnectionManager:
             return None
 
         try:
-            # Receive raw bytes
-            data = await conn_info.websocket.receive_bytes()
-            conn_info.update_activity()
-
-            # Decode message
-            message = conn_info.protocol.decode(data)
-            return message
+            # Try to receive as text (for JSON encoding)
+            # or bytes (for msgpack encoding)
+            if conn_info.protocol.encoding == "json":
+                # JSON clients send text frames
+                text_data = await conn_info.websocket.receive_text()
+                logger.debug(f"Received JSON text from {session_id}: {text_data[:100]}")
+                conn_info.update_activity()
+                message = conn_info.protocol.decode(text_data.encode("utf-8"))
+                logger.debug(f"Decoded message type: {message.type}")
+                return message
+            else:
+                # MessagePack clients send binary frames
+                data = await conn_info.websocket.receive_bytes()
+                conn_info.update_activity()
+                message = conn_info.protocol.decode(data)
+                return message
 
         except Exception as e:
-            # Check if it's a normal disconnect
-            if isinstance(e, TypeError) and "bytes" in str(e):
-                # Might be text/json instead of bytes
-                try:
-                    data = await conn_info.websocket.receive_text()
-                    conn_info.update_activity()
-                    message = conn_info.protocol.decode(data.encode())
-                    return message
-                except Exception:
-                    pass
-
-            logger.debug(f"Connection closed or error for {session_id}: {e}")
+            logger.error(f"Error receiving message from {session_id}: {e}", exc_info=True)
             return None
 
     def is_connected(self, session_id: str) -> bool:

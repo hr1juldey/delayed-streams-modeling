@@ -25,10 +25,10 @@ async def health_check() -> Dict[str, Any]:
     Returns:
         Dictionary with health status.
     """
-    from src.models.stt.model_manager import _stt_model_manager
-    from src.models.tts.model_manager import _tts_model_manager
-    from src.services.websocket.connection import _connection_manager
-    from src.services.session.manager import _session_manager
+    from voice_server.src.models.stt.model_manager import _stt_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.services.websocket.connection import _connection_manager
+    from voice_server.src.services.session.manager import _session_manager
 
     # Gather health information
     health = {
@@ -65,7 +65,7 @@ async def health_check() -> Dict[str, Any]:
         health["sessions"]["active_sessions"] = 0
 
     # Server info
-    from config.settings import ServerSettings
+    from voice_server.config.settings import ServerSettings
 
     settings = ServerSettings()
     health["server"] = {
@@ -92,10 +92,10 @@ async def prometheus_metrics():
     metrics_collector = get_metrics_collector()
 
     # Update current metrics
-    from src.models.stt.model_manager import _stt_model_manager
-    from src.models.tts.model_manager import _tts_model_manager
-    from src.services.websocket.connection import _connection_manager
-    from src.services.session.manager import _session_manager
+    from voice_server.src.models.stt.model_manager import _stt_model_manager
+    from voice_server.src.models.tts.model_manager import _tts_model_manager
+    from voice_server.src.services.websocket.connection import _connection_manager
+    from voice_server.src.services.session.manager import _session_manager
 
     # Update session counts
     stt_sessions = 0
@@ -140,7 +140,7 @@ async def server_status() -> Dict[str, Any]:
     health = await health_check()
 
     # Add additional status information
-    from src.services.websocket.heartbeat import _heartbeat_monitor
+    from voice_server.src.services.websocket.heartbeat import _heartbeat_monitor
 
     if _heartbeat_monitor is not None:
         health["heartbeat"] = _heartbeat_monitor.get_health_summary()

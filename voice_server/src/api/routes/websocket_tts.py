@@ -65,7 +65,7 @@ class TTSWebSocketHandler:
         """Main handler for the WebSocket connection."""
         try:
             # Get TTS model manager
-            tts_manager = await get_tts_model_manager(self.settings.tts)
+            tts_manager = await get_tts_model_manager()
 
             self._running = True
             logger.info(f"TTS WebSocket handler started: {self.session_id}")
@@ -346,19 +346,17 @@ async def tts_websocket(websocket: WebSocket):
     encoding = websocket.query_params.get("encoding", "json")
 
     # Get connection manager
-    from src.services.websocket.connection import get_connection_manager
+    from voice_server.src.services.websocket.connection import get_connection_manager
 
     try:
         connection_manager = get_connection_manager()
     except RuntimeError:
         # Connection manager not initialized - create temporary one
-        from src.services.websocket.connection import ConnectionManager
+        from voice_server.src.services.websocket.connection import ConnectionManager
 
         connection_manager = ConnectionManager(settings)
 
     # Accept connection
-    protocol = MessageProtocol(encoding=encoding)
-
     try:
         conn_info = await connection_manager.connect(websocket, session_id, encoding)
     except (RuntimeError, ValueError) as e:
@@ -367,9 +365,9 @@ async def tts_websocket(websocket: WebSocket):
 
     logger.info(f"TTS WebSocket connected: {session_id}")
 
-    # Create handler and run
+    # Create handler and run (use protocol from conn_info)
     handler = TTSWebSocketHandler(
-        websocket, session_id, settings, connection_manager, protocol
+        websocket, session_id, settings, connection_manager, conn_info.protocol
     )
 
     try:
