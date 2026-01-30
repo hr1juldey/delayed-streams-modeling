@@ -9,7 +9,7 @@ from typing import Optional
 from voice_server.config.logging_config import get_logger
 from voice_server.config.settings import STTSettings
 from voice_server.src.models.stt.base import STTModelBase, STTConfig, STTModelName
-from voice_server.src.models.stt.kyutai import KyutaiSTTModel
+from voice_server.src.models.stt.whisper import WhisperSTTModel
 from voice_server.src.core.exceptions import ModelException
 
 logger = get_logger(__name__)
@@ -33,7 +33,7 @@ class STTModelManager:
             settings: STT configuration settings.
         """
         self.settings = settings
-        self._model: Optional[KyutaiSTTModel] = None
+        self._model: Optional[WhisperSTTModel] = None
         self._current_model_name: Optional[STTModelName] = None
         self._lock = asyncio.Lock()
         self._active_sessions: set[str] = set()
@@ -51,19 +51,19 @@ class STTModelManager:
             return
 
         try:
-            # Create config from settings
             model_name = STTModelName(self.settings.model_name)
             config = STTConfig(
                 model_name=model_name,
                 device=self.settings.device,
+                compute_type=getattr(self.settings, "compute_type", "float16"),
                 vad_mode=self.settings.vad_mode,
                 streaming_mode=self.settings.streaming_mode,
                 confidence_threshold=self.settings.confidence_threshold,
                 target_latency_ms=self.settings.target_latency_ms,
+                language=getattr(self.settings, "language", None),
             )
 
-            # Create and initialize model
-            self._model = KyutaiSTTModel(config)
+            self._model = WhisperSTTModel(config)
             await self._model.initialize()
 
             self._current_model_name = model_name
@@ -288,19 +288,19 @@ class STTModelManager:
                     except Exception as e:
                         logger.error(f"Error closing session {session_id}: {e}")
 
-            # Create new config
             config = STTConfig(
                 model_name=target_model,
                 device=self.settings.device,
+                compute_type=getattr(self.settings, "compute_type", "float16"),
                 vad_mode=self.settings.vad_mode,
                 streaming_mode=self.settings.streaming_mode,
                 confidence_threshold=self.settings.confidence_threshold,
                 target_latency_ms=self.settings.target_latency_ms,
+                language=getattr(self.settings, "language", None),
             )
 
-            # Create and initialize new model
             try:
-                new_model = KyutaiSTTModel(config)
+                new_model = WhisperSTTModel(config)
                 await new_model.initialize()
 
                 # Swap models

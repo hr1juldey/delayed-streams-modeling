@@ -1,7 +1,19 @@
-"""Kyutai STT model implementation.
+"""DEPRECATED: Kyutai STT model implementation.
 
-Extends the patterns from scripts/stt_from_file_pytorch.py for
-streaming speech-to-text with timestamp extraction.
+This module has been deprecated due to CUDA 13.0 compatibility issues.
+The moshi library (v0.2.12) causes "Invalid handle" cuBLAS errors on CUDA 13.0.
+
+This implementation has been replaced by whisper.py which uses faster-whisper.
+The new implementation provides:
+- Better CUDA compatibility (works with CUDA 13.0)
+- Multiple model sizes (tiny, base, small, medium, large-v2, large-v3)
+- Multilingual support
+- Active maintenance
+
+This file is kept for reference only. Use WhisperSTTModel instead.
+
+Replacement: voice_server.src.models.stt.whisper.WhisperSTTModel
+Deprecated: 2025-01-30
 """
 
 import asyncio

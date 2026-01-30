@@ -12,11 +12,7 @@ pydantic-settings>=2.0
 msgpack>=1.0.0
 
 # STT (Speech-to-Text)
-moshi==0.2.12
-torch>=2.0.0
-julius>=0.2.0
-sphn>=0.1.0
-openai-whisper>=20250625
+faster-whisper>=1.0.0
 # TTS (Text-to-Speech)
 pocket-tts>=0.1.0
 

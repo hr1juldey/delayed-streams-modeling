@@ -13,10 +13,14 @@ import numpy as np
 
 
 class STTModelName(str, Enum):
-    """Available STT model names."""
+    """Available STT model names (Whisper models)."""
 
-    EN_FR_1B = "1b-en_fr"
-    EN_2_6B = "2.6b-en"
+    TINY = "tiny"
+    BASE = "base"
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE_V2 = "large-v2"
+    LARGE_V3 = "large-v3"
 
 
 @dataclass
@@ -26,20 +30,22 @@ class STTConfig:
     Attributes:
         model_name: Name of the model to use.
         device: Device to run on (cuda, cpu).
+        compute_type: Compute type for Whisper (default, int8, int16, float16).
         vad_mode: VAD mode (client, server).
         streaming_mode: Streaming output mode (partial, final, both).
         confidence_threshold: Minimum confidence for results.
         target_latency_ms: Target latency in milliseconds.
-        custom_vocabulary: Optional custom vocabulary/phrases.
+        language: Language code or None for auto-detection.
     """
 
     model_name: STTModelName
     device: str = "cuda"
+    compute_type: str = "float16"
     vad_mode: str = "client"
     streaming_mode: str = "both"
     confidence_threshold: float = 0.5
     target_latency_ms: int = 200
-    custom_vocabulary: Optional[list[str]] = None
+    language: Optional[str] = None
 
 
 @dataclass
