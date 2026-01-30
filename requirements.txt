@@ -12,7 +12,7 @@ pydantic-settings>=2.0
 msgpack>=1.0.0
 
 # STT (Speech-to-Text)
-moshi==0.2.11
+moshi==0.2.12
 torch>=2.0.0
 julius>=0.2.0
 sphn>=0.1.0
