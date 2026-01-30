@@ -1,18 +1,13 @@
-"""
-Speech-to-Text (STT) client for the voice server.
-
-Provides transcription capabilities with automatic audio handling,
-validation, and streaming support.
-"""
+"""Speech-to-Text (STT) client for the voice server."""
 
 import asyncio
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from voice_client.audio import AudioHandler
 from voice_client.client import BaseClient
+from voice_client.constants import DEFAULT_CHUNK_MS, DEFAULT_SAMPLE_RATE, DEFAULT_TIMEOUT
 from voice_client.exceptions import TimeoutError as VoiceTimeoutError
 from voice_client.protocol import (
     Message,
@@ -22,21 +17,7 @@ from voice_client.protocol import (
     create_config_message,
     create_eos_message,
 )
-
-
-@dataclass
-class TranscriptionResult:
-    """Result from speech transcription.
-
-    Attributes:
-        text: Transcribed text
-        is_final: Whether this is the final result
-        confidence: Confidence score (0.0 to 1.0)
-    """
-
-    text: str
-    is_final: bool
-    confidence: float
+from voice_client.stt.result import TranscriptionResult
 
 
 class STTClient(BaseClient):
@@ -74,18 +55,17 @@ class STTClient(BaseClient):
 
     async def configure(self) -> None:
         """Send configuration to the server."""
-
         await self.send(
             create_config_message(
                 data=self.config,
-                session_id=self._session_id or "",
+                session_id=self.session_id,
             )
         )
 
     async def send_audio(
         self,
         audio: str | bytes | Path,
-        chunk_size_ms: int = 80,
+        chunk_size_ms: int = DEFAULT_CHUNK_MS,
     ) -> None:
         """Send audio for transcription.
 
@@ -101,7 +81,7 @@ class STTClient(BaseClient):
             audio_bytes, sample_rate = AudioHandler.load_audio_file(audio)
         else:
             audio_bytes = audio
-            sample_rate = 24000  # Assume default
+            sample_rate = DEFAULT_SAMPLE_RATE  # Assume default
 
         # Validate
         AudioHandler.validate_audio(audio_bytes, sample_rate)
@@ -114,16 +94,16 @@ class STTClient(BaseClient):
             await self.send(
                 create_audio_message(
                     data=chunk,
-                    session_id=self._session_id or "",
+                    session_id=self.session_id,
                     sample_rate=sample_rate,
                 )
             )
 
     async def send_eos(self) -> None:
         """Signal end of audio stream."""
-        await self.send(create_eos_message(session_id=self._session_id or ""))
+        await self.send(create_eos_message(session_id=self.session_id))
 
-    async def get_transcription(self, timeout: float = 30.0) -> str:
+    async def get_transcription(self, timeout: float = DEFAULT_TIMEOUT) -> str:
         """Wait for final transcription.
 
         Args:
@@ -178,7 +158,7 @@ class STTClient(BaseClient):
     async def transcribe(
         self,
         audio: str | bytes | Path,
-        timeout: float = 30.0,
+        timeout: float = DEFAULT_TIMEOUT,
     ) -> str:
         """Convenience method: send audio and get transcription.
 
@@ -189,7 +169,6 @@ class STTClient(BaseClient):
         Returns:
             Transcribed text
         """
-
         # Register handler
         async def handler(msg: Message) -> None:
             if isinstance(msg, TextMessage) and msg.is_final:

@@ -24,10 +24,7 @@ from voice_client.exceptions import VoiceClientError
 async def main():
     """Transcribe an audio file."""
     # Configure the audio file path
-    if len(sys.argv) > 1:
-        audio_file = sys.argv[1]
-    else:
-        audio_file = "audio/bria.wav"  # Default test file
+    audio_file = sys.argv[1] if len(sys.argv) > 1 else "audio/bria.wav"
 
     print(f"Transcribing: {audio_file}")
     print("-" * 40)

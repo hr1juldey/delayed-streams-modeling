@@ -5,6 +5,8 @@ Provides Python clients for Speech-to-Text (STT), Text-to-Speech (TTS),
 and combined voice conversations via WebSocket.
 """
 
+__version__ = "0.1.0"
+
 # Audio
 from voice_client.audio import AudioHandler
 
@@ -72,43 +74,43 @@ def _default_agent_callback(text: str) -> str:
 
 
 __all__ = [
-    # Exceptions
-    "VoiceClientError",
-    "VoiceClientConnectionError",
+    "AudioChunk",
     "AudioFormatError",
-    "ProtocolError",
-    "ConfigurationError",
-    "VoiceClientTimeoutError",
-    "ServerError",
-    "RecordingError",
-    "PlaybackError",
-    # Protocol
-    "MessageType",
-    "Message",
-    "AudioMessage",
-    "TextMessage",
-    "ErrorMessage",
-    "EOSMessage",
-    "ConfigMessage",
-    "JSONEncoder",
-    "MessagePackEncoder",
-    "get_encoder",
-    "create_audio_message",
-    "create_text_message",
-    "create_config_message",
-    "create_eos_message",
     # Audio
     "AudioHandler",
+    "AudioMessage",
+    "AudioPlayer",
     # Audio I/O
     "AudioRecorder",
-    "AudioPlayer",
     # Clients
     "BaseClient",
+    "ConfigMessage",
+    "ConfigurationError",
+    "ConversationEvent",
+    "EOSMessage",
+    "ErrorMessage",
+    "JSONEncoder",
+    "Message",
+    "MessagePackEncoder",
+    # Protocol
+    "MessageType",
+    "PlaybackError",
+    "ProtocolError",
+    "RecordingError",
     "STTClient",
+    "ServerError",
     "TTSClient",
-    "VoiceClient",
+    "TextMessage",
     # Dataclasses
     "TranscriptionResult",
-    "AudioChunk",
-    "ConversationEvent",
+    "VoiceClient",
+    "VoiceClientConnectionError",
+    # Exceptions
+    "VoiceClientError",
+    "VoiceClientTimeoutError",
+    "create_audio_message",
+    "create_config_message",
+    "create_eos_message",
+    "create_text_message",
+    "get_encoder",
 ]

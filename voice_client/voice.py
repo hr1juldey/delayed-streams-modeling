@@ -6,9 +6,12 @@ agent processing, and text-to-speech synthesis.
 """
 
 import asyncio
+import types
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
+
+from typing_extensions import Self
 
 from voice_client.stt import STTClient, TranscriptionResult
 from voice_client.tts import AudioChunk, TTSClient
@@ -62,7 +65,7 @@ class VoiceClient:
         self.stt = STTClient(stt_url, api_key, **kwargs)
         self.tts = TTSClient(tts_url, api_key, **kwargs)
 
-    async def __aenter__(self) -> "VoiceClient":
+    async def __aenter__(self) -> Self:
         """Enter the async context manager.
 
         Returns:
@@ -81,7 +84,7 @@ class VoiceClient:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: Any,
+        exc_tb: types.TracebackType | None,
     ) -> None:
         """Exit the async context manager.
 

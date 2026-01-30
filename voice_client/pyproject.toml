@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "voice-client-sdk"
+version = "0.1.0"
+description = "Python client SDK for the voice server"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Voice Client SDK Contributors", email = "noreply@example.com"}
+]
+keywords = ["voice", "stt", "tts", "websocket", "audio", "speech"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+dependencies = [
+    "websockets>=14.0",
+    "msgpack>=1.0.0",
+]
+
+[project.optional-dependencies]
+audio = [
+    "sounddevice>=0.4.6",
+    "numpy>=1.20.0",
+]
+dev = [
+    "ruff>=0.1.0",
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.urls]
+Homepage = "https://github.com/kyutai/voice-client-sdk"
+Documentation = "https://github.com/kyutai/voice-client-sdk#readme"
+Repository = "https://github.com/kyutai/voice-client-sdk"
+
+[tool.hatch.build.targets.wheel]
+packages = ["voice_client"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "C4", "SIM", "TCH", "PYI", "RUF"]
+ignore = ["D203", "D212"]  # Use D211 and D213 instead
+
+[tool.ruff.lint.isort]
+known-first-party = ["voice_client"]

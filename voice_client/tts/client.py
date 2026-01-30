@@ -1,23 +1,15 @@
-"""
-Text-to-Speech (TTS) client for the voice server.
-
-Provides speech synthesis capabilities with streaming audio output.
-"""
+"""Text-to-Speech (TTS) client for the voice server."""
 
 import asyncio
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from voice_client.audio import AudioHandler
 from voice_client.client import BaseClient
-from voice_client.exceptions import (
-    ConfigurationError,
-)
-from voice_client.exceptions import (
-    ServerError as VoiceServerError,
-)
+from voice_client.constants import DEFAULT_SAMPLE_RATE
+from voice_client.exceptions import ConfigurationError
+from voice_client.exceptions import ServerError as VoiceServerError
 from voice_client.protocol import (
     AudioMessage,
     EOSMessage,
@@ -27,23 +19,7 @@ from voice_client.protocol import (
     create_config_message,
     create_text_message,
 )
-
-
-@dataclass
-class AudioChunk:
-    """Audio chunk from TTS synthesis.
-
-    Attributes:
-        data: Raw audio data
-        format: Audio format (e.g., "pcm_int16")
-        sample_rate: Sample rate in Hz
-        is_final: Whether this is the final chunk
-    """
-
-    data: bytes
-    format: str
-    sample_rate: int
-    is_final: bool
+from voice_client.tts.chunk import AudioChunk
 
 
 class TTSClient(BaseClient):
@@ -85,7 +61,7 @@ class TTSClient(BaseClient):
         await self.send(
             create_config_message(
                 data=self.config,
-                session_id=self._session_id or "",
+                session_id=self.session_id,
             )
         )
 
@@ -131,7 +107,7 @@ class TTSClient(BaseClient):
         await self.send(
             create_text_message(
                 data=text,
-                session_id=self._session_id or "",
+                session_id=self.session_id,
             )
         )
 
@@ -145,7 +121,7 @@ class TTSClient(BaseClient):
                 yield AudioChunk(
                     data=audio,
                     format=self.config.get("output_format", "pcm_int16"),
-                    sample_rate=24000,
+                    sample_rate=DEFAULT_SAMPLE_RATE,
                     is_final=False,
                 )
             except asyncio.TimeoutError:

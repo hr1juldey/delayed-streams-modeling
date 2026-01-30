@@ -6,11 +6,13 @@ message encoding/decoding, and automatic reconnection.
 """
 
 import asyncio
+import types
 import uuid
 from collections.abc import Callable
 from typing import Any
 
 import websockets
+from typing_extensions import Self
 
 from voice_client.exceptions import ConnectionError as VoiceConnectionError
 from voice_client.protocol import Message, MessageType, get_encoder
@@ -66,7 +68,16 @@ class BaseClient:
         self._running = False
         self._message_task: asyncio.Task[None] | None = None
 
-    async def __aenter__(self) -> "BaseClient":
+    @property
+    def session_id(self) -> str:
+        """Get the current session ID, with empty string fallback.
+
+        Returns:
+            The session ID or empty string if not connected
+        """
+        return self._session_id or ""
+
+    async def __aenter__(self) -> Self:
         """Enter the async context manager.
 
         Returns:
@@ -79,7 +90,7 @@ class BaseClient:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: Any,
+        exc_tb: types.TracebackType | None,
     ) -> None:
         """Exit the async context manager.
 
@@ -151,7 +162,7 @@ class BaseClient:
 
         # Set session_id if not provided
         if message.session_id is None:
-            message.session_id = self._session_id or ""
+            message.session_id = self.session_id
 
         encoded = self.encoder.encode(message)
         # JSON encoding uses text frames, MessagePack uses binary frames
