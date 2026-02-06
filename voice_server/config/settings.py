@@ -1,6 +1,6 @@
 """Configuration settings for the voice server using Pydantic Settings."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,7 +18,7 @@ class AudioSettings(BaseModel):
 class STTSettings(BaseModel):
     """Speech-to-Text model configuration for Whisper (faster-whisper)."""
 
-    model_name: Literal["tiny", "base", "small", "medium", "large-v2", "large-v3"] = "base"
+    model_name: Literal["tiny", "base", "small", "medium", "large-v2", "large-v3"] = "medium"
     device: str = "cuda"
     compute_type: Literal["default", "int8", "int16", "float16"] = "float16"
     preload_model: bool = True
@@ -27,7 +27,7 @@ class STTSettings(BaseModel):
     streaming_mode: Literal["partial", "final", "both"] = "both"
     confidence_threshold: float = 0.5
     target_latency_ms: int = 200
-    language: Optional[str] = None  # Auto-detect by default
+    language: str | None = None  # Auto-detect by default
 
 
 class TTSSettings(BaseModel):

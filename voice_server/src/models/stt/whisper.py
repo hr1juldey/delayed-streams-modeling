@@ -14,8 +14,12 @@ from voice_server.src.models.stt.base import (
     STTResult,
     STTSegment,
 )
+from voice_server.src.utils.audio import resample
 
 logger = get_logger(__name__)
+
+# Whisper models are trained on 16kHz audio
+WHISPER_SAMPLE_RATE = 16000
 
 
 @dataclass
@@ -24,6 +28,7 @@ class SessionState:
 
     audio_buffer: list[np.ndarray] = field(default_factory=list)
     total_samples: int = 0
+    input_sample_rate: int = 16000  # Frontend now sends 16kHz PCM directly
 
 
 class WhisperSTTModel(STTModelBase):
@@ -105,6 +110,20 @@ class WhisperSTTModel(STTModelBase):
 
         audio_data = np.concatenate(session.audio_buffer)
 
+        # Resample from input sample rate to Whisper's 16kHz if needed
+        if session.input_sample_rate != WHISPER_SAMPLE_RATE:
+            logger.debug(
+                f"Resampling audio from {session.input_sample_rate}Hz to {WHISPER_SAMPLE_RATE}Hz"
+            )
+            loop = asyncio.get_event_loop()
+            audio_data = await loop.run_in_executor(
+                self._executor,
+                resample,
+                audio_data,
+                session.input_sample_rate,
+                WHISPER_SAMPLE_RATE,
+            )
+
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
             self._executor,
@@ -118,7 +137,7 @@ class WhisperSTTModel(STTModelBase):
             is_final=True,
             confidence=result.get("avg_logprob", 0.0),
             timestamp_start=0.0,
-            timestamp_end=len(audio_data) / 16000.0,
+            timestamp_end=len(audio_data) / WHISPER_SAMPLE_RATE,
             tokens=None,
         )
 
@@ -128,7 +147,7 @@ class WhisperSTTModel(STTModelBase):
             audio,
             language=self.config.language,
             beam_size=5,
-            vad_filter=True,
+            vad_filter=False,  # Disabled - VAD was too aggressive and filtering out all audio
         )
 
         full_text = " ".join(seg.text for seg in segments).strip()
@@ -177,7 +196,7 @@ class WhisperSTTModel(STTModelBase):
             text="".join(full_text).strip(),
             words=words,
             start_time=0.0,
-            end_time=len(audio) / 16000.0,
+            end_time=len(audio) / WHISPER_SAMPLE_RATE,
             confidence=info.language_probability,
         )
 
